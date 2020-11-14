@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+(
+    export BINARY_SHORT_NAME='iota'
+    export SOURCE_PATH='./cmd/iota'
+    export ASSETS="$SCRIPTDIR/resources"
+    source "${MAKEDIR}/.binary"
+)

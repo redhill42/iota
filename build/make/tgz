@@ -1,0 +1,50 @@
+#!/bin/bash
+set -e
+
+SERVER_BINARY="$DEST/../binary-server/iota-$VERSION"
+CROSS="$DEST/../cross"
+
+if ! [ -x "$SERVER_BINARY" ]; then
+    echo >&2 'error: binary must be run before tgz'
+    false
+fi
+
+(
+# The staging directory for the files in the tgz
+BUILD_PATH="$DEST/build"
+
+# The directory that is at the root of the tar file
+TAR_BASE_DIRECTORY="iota"
+
+# $DEST/build/iota
+TAR_PATH="$BUILD_PATH/$TAR_BASE_DIRECTORY"
+
+TGZ="$DEST/iota-$VERSION-linux-amd64.tar.gz"
+
+# Copy the binary
+mkdir -p $TAR_PATH/usr/bin
+mkdir -p $TAR_PATH/usr/local/iota
+cp -L $SERVER_BINARY $TAR_PATH/usr/bin/iota
+
+for d in "$CROSS"/*/*; do
+  if [ -d $d ]; then
+  (
+    export GOARCH="$(basename "$d")"
+    export GOOS="$(basename "$(dirname "$d")")"
+    BINARY_EXTENSION="$(export GOOS && binary_extension)"
+    DIST="$TAR_PATH/usr/local/iota/dist/$GOOS/$GOARCH"
+    mkdir -p $DIST
+    cp -L "$d/cwcli-$VERSION$BINARY_EXTENSION" "$DIST/cwcli$BINARY_EXTENSION"
+  )
+  fi
+done
+
+echo "Creating tgz from $BUILD_PATH and naming it $TGZ"
+tar --numeric-owner --owner 0 -C "$BUILD_PATH" -czf "$TGZ" $TAR_BASE_DIRECTORY
+hash_files "$TGZ"
+
+# cleanup after ourselves
+rm -rf "$BUILD_PATH"
+
+echo "Created tgz: $TGZ"
+)

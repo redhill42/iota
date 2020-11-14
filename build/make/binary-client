@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+(
+    export BINARY_SHORT_NAME='iotacli'
+    export SOURCE_PATH="./cmd/iotacli'
+    source "${MAKEDIR}/.binary"
+)

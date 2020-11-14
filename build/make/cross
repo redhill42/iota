@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+for platform in ${CROSS:-$IOTA_CROSSPLATFORMS}; do
+    (
+        export DEST="$DEST/$platform" # bundles/VERSION/cross/GOOS/GOARCH/iotacli-VERSION
+        mkdir -p "$DEST"
+        ABS_DEST="$(cd "$DEST" && pwd -P)"
+        export GOOS=${platform%/*}
+        export GOARCH=${platform##*/}
+
+        source "${MAKEDiR}/binary-client"
+        source "${MAKEDIR}/binary-server"
+    )
+done
