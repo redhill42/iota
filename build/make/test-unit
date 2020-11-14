@@ -12,7 +12,7 @@ bundle_test_setup() {
     bundle_test_cleanup || true
     source "${MAKEDIR}/.ensure-images"
 
-    tar -xf "$DEST/../tgz/iota-$VERSION-linux-amd64.tar.gz" --strip-components=1 -C /
+    tar -xf "$DEST/../tgz/$PROJ_SHORTNAME-$VERSION-linux-amd64.tar.gz" --strip-components=1 -C /
 }
 
 bundle_test_teardown() {
@@ -56,12 +56,12 @@ bundle_test_unit() {
     fi
 
     pkg_list=$(go list -e \
-        -f '{{if ne .Name "github.com/redhill42/iota"}}
+        -f '{{if ne .Name "$PROJECT"}}
             {{.ImportPath}}
             {{end}}' \
         "${BUILDFLAGS[@]}" $TEST_PATH \
-        | grep github.com/redhill42/iota \
-        | grep -v github.com/redhill42/iota/vendor)
+        | grep $PROJECT \
+        | grep -v $PROJECT/vendor)
 
     test_pkg_list=()
     for pkg in $pkg_list; do

@@ -1,14 +1,20 @@
 #!/bin/bash
 set -e
 
-(
-    DEST="${DEST}-client"
-    ABS_DEST="${ABS_DEST}-client"
-    . build/make/binary-client
-)
-(
-    DEST="${DEST}-server"
-    ABS_DEST="${ABS_DEST}-server"
-    . build/make/binary-server
-)
-rmdir $DEST
+for platform in ${CROSS:-$CROSSPLATFORMS}; do
+  (
+    export DEST="$DEST/$platform"
+    mkdir -p "$DEST"
+    ABS_DEST="$(cd "$DEST" && pwd -P)"
+    export GOOS=${platform%/*}
+    export GOARCH=${platform##*/}
+
+    for binary in ${BINARIES[@]}; do
+      (
+        export BINARY_SHORT_NAME=$binary
+        export SOURCE_PATH="./cmd/$binary"
+        source "${MAKEDIR}/.binary"
+      )
+    done
+  )
+done

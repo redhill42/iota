@@ -1,30 +1,11 @@
 #!/bin/bash
 set -e
 
-SERVER_BINARY="$DEST/../binary-server/iota-$VERSION"
-CROSS="$DEST/../cross"
-
-if ! [ -x "$SERVER_BINARY" ]; then
-    echo >&2 'error: binary must be run before tgz'
-    false
-fi
+CROSS="$DEST/../binary"
 
 (
 # The staging directory for the files in the tgz
 BUILD_PATH="$DEST/build"
-
-# The directory that is at the root of the tar file
-TAR_BASE_DIRECTORY="iota"
-
-# $DEST/build/iota
-TAR_PATH="$BUILD_PATH/$TAR_BASE_DIRECTORY"
-
-TGZ="$DEST/iota-$VERSION-linux-amd64.tar.gz"
-
-# Copy the binary
-mkdir -p $TAR_PATH/usr/bin
-mkdir -p $TAR_PATH/usr/local/iota
-cp -L $SERVER_BINARY $TAR_PATH/usr/bin/iota
 
 for d in "$CROSS"/*/*; do
   if [ -d $d ]; then
@@ -32,19 +13,22 @@ for d in "$CROSS"/*/*; do
     export GOARCH="$(basename "$d")"
     export GOOS="$(basename "$(dirname "$d")")"
     BINARY_EXTENSION="$(export GOOS && binary_extension)"
-    DIST="$TAR_PATH/usr/local/iota/dist/$GOOS/$GOARCH"
+    TAR_PATH="$BUILD_PATH/$GOOS/$GOARCH"
+    TGZ="$DEST/$PROJ_SHORTNAME-$VERSION-$GOOS-$GOARCH.tar.gz"
+    DIST="$TAR_PATH/usr/local/$PROJ_SHORTNAME/bin"
     mkdir -p $DIST
-    cp -L "$d/cwcli-$VERSION$BINARY_EXTENSION" "$DIST/cwcli$BINARY_EXTENSION"
+
+    for b in ${BINARIES[@]}; do
+        cp -L "$d/$b$BINARY_EXTENSION" "$DIST/$b$BINARY_EXTENSION"
+    done
+
+    echo "Creating tgz from $TAR_PATH and naming it $TGZ"
+    tar --numeric-owner --owner 0 -C "$TAR_PATH" -czf "$TGZ" .
+    hash_files "$TGZ"
   )
   fi
 done
 
-echo "Creating tgz from $BUILD_PATH and naming it $TGZ"
-tar --numeric-owner --owner 0 -C "$BUILD_PATH" -czf "$TGZ" $TAR_BASE_DIRECTORY
-hash_files "$TGZ"
-
 # cleanup after ourselves
 rm -rf "$BUILD_PATH"
-
-echo "Created tgz: $TGZ"
 )

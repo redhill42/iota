@@ -21,7 +21,10 @@ set -e
 
 set -o pipefail
 
-export IOTA_PKG="github.com/redhill42/iota"
+export PROJECT=github.com/redhill42/iota
+export PROJ_SHORTNAME=iota
+export BINARIES=(iota iotacli)
+
 export SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export MAKEDIR="$SCRIPTDIR/make"
 
@@ -32,7 +35,7 @@ if [ "$(go env GOHOSTOS)" = 'windows' ]; then
         unset inContainer
     fi
 else
-    if [ "$PWD" != "/go/src/$IOTA_PKG" ] || [ -z "$IOTA_CROSSPLATFORMS" ]; then
+    if [ "$PWD" != "/go/src/$PROJECT" ] || [ -z "$CROSSPLATFORMS" ]; then
         unset inContainer
     fi
 fi
@@ -52,12 +55,10 @@ fi
 DEFAULT_BUNDLES=(
     validate-gofmt
     validate-vet
-    binary-client
-    binary-server
-    cross
+    binary
     tgz
-    test-unit
-    cover
+#    test-unit
+#    cover
 )
 
 VERSION=$(< ./VERSION)
@@ -74,12 +75,12 @@ if command -v git &> /dev/null && [ -d .git ] && git rev-parse &> /dev/null; the
         git status --porcelain --untracked-files=no
         echo "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     fi
-elif [ "$IOTA_GITCOMMIT" ]; then
-    GITCOMMIT="$IOTA_GITCOMMIT"
+elif [ "$PROJ_GITCOMMIT" ]; then
+    GITCOMMIT="$PROJ_GITCOMMIT"
 else
-    echo >&2 "#error: .git directory missing and IOTA_GITCOMMIT not specified"
+    echo >&2 "#error: .git directory missing and PROJ_GITCOMMIT not specified"
     echo >&2 "  Please either build with the .git directory accessible, or specify the"
-    echo >&2 "  exact (--short) commit hash you are building using IOTA_COMMIT"
+    echo >&2 "  exact (--short) commit hash you are building using PROJ_GITCOMMIT"
     echo >&2 "  future accountability in diagnosing build issues.  Thanks!"
     exit 1
 fi
@@ -92,8 +93,8 @@ fi
 
 if [ "$AUTO_GOPATH" ]; then
     rm -rf .gopath
-    mkdir -p .gopath/src/"$(dirname "${IOTA_PKG}")"
-    ln -sf ../../../.. .gopath/src/"${IOTA_PKG}"
+    mkdir -p .gopath/src/"$(dirname "${PROJECT}")"
+    ln -sf ../../../.. .gopath/src/"${PROJECT}"
     export GOPATH="${PWD}/.gopath"
 fi
 
@@ -107,7 +108,7 @@ fi
 
 IAMSTATIC='true'
 source "$SCRIPTDIR/make/.go-autogen"
-if [ -z "$IOTA_DEBUG" ]; then
+if [ -z "$PROJ_DEBUG" ]; then
     LDFLAGS='-w'
 fi
 
@@ -116,12 +117,12 @@ LDFLAGS_STATIC="-extldflags \"$EXTLDFLAGS_STATIC\""
 
 # ORIG_BUILDFLAGS is necessary for the cross target which cannot always build
 # with options link -race
-ORIG_BUILDFLAGS=( -tags "autogen netgo static_build $IOTA_BUILDTAGS" )
+ORIG_BUILDFLAGS=( -tags "autogen netgo static_build $PROJ_BUILDTAGS" )
 
-# When $IOTA_INCREMENTAL_BINARY is set tin the environment, enable incremental
+# When $INCREMENTAL_BINARY is set in the environment, enable incremental
 # builds by installing dependent packages to the GOPATH
 REBUILD_FLAG="-a"
-if [ "$IOTA_INCREMENTAL_BINARY" ]; then
+if [ "$INCREMENTAL_BINARY" ]; then
     REBUILD_FLAG="-i"
 fi
 ORIG_BUILDFLAGS+=( $REBUILD_FLAG )

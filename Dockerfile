@@ -16,8 +16,8 @@ FROM icloudway/dev:latest
 ENV GOPATH /go
 
 # Compile Go for cross compilation
-ENV IOTA_CROSSPLATFORMS \
-    linux/386 linux/arm \
+ENV CROSSPLATFORMS \
+    linux/amd64 linux/386 linux/arm \
     darwin/amd64 \
     windows/amd64 windows/386
 

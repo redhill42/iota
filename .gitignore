@@ -1,0 +1,9 @@
+*.orig
+.*.swp
+*.ipr
+*.iws
+*.iml
+.DS_Store
+.gopath/
+bundles/
+vendor/
