@@ -49,10 +49,10 @@ go build \
     $SOURCE_PATH
 )
 
-if [ -n "$ASSETS" ]; then
+if [ -n "$ASSETS" -a -e "$ASSETS/$BINARY_SHORT_NAME" ]; then
     # embeded resources to executable
-    zip -rj assets.zip "$ASSETS"
+    zip -rj assets.zip "$ASSETS/$BINARY_SHORT_NAME" >/dev/null
     cat assets.zip >> "$DEST/$BINARY_FULLNAME"
-    zip -A "$DEST/$BINARY_FULLNAME"
+    zip -A "$DEST/$BINARY_FULLNAME" >/dev/null
     rm assets.zip
 fi

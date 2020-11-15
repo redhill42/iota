@@ -13,6 +13,7 @@ for platform in ${CROSS:-$CROSSPLATFORMS}; do
       (
         export BINARY_SHORT_NAME=$binary
         export SOURCE_PATH="./cmd/$binary"
+        export ASSETS="$SCRIPTDIR/resources"
         source "${MAKEDIR}/.binary"
       )
     done

@@ -6,10 +6,12 @@ package api
 // Default build-time variable for library-import
 // This file is overridden on build with build-time information.
 const (
-	GitCommit string = "library-import"
 	Version   string = "library-import"
+	GitCommit string = "library-import"
 	BuildTime string = "library-import"
 
-	// MinVersion represents Minimum REST API version supported
-	MinVersion string = "0.1"
+	// APIVersion represents current REST API version
+	APIVersion string = "1"
+	// MinAPIVersion represents minimum REST API version supported
+	MinAPIVersion string = "1"
 )
