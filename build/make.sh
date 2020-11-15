@@ -54,11 +54,10 @@ fi
 # List of bundles to create when no argument is passed
 DEFAULT_BUNDLES=(
     validate-gofmt
-    validate-vet
     binary
     tgz
-#    test-unit
-#    cover
+    test-unit
+    cover
 )
 
 VERSION=$(< ./VERSION)

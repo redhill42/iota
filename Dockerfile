@@ -17,9 +17,9 @@ ENV GOPATH /go
 
 # Compile Go for cross compilation
 ENV CROSSPLATFORMS \
-    linux/amd64 linux/386 linux/arm \
-#    darwin/amd64 #FIXME \
-    windows/amd64 windows/386
+    linux/amd64 linux/arm \
+    windows/amd64
+#    darwin/amd64 #FIXME
 
 WORKDIR /go/src/github.com/redhill42/iota
 

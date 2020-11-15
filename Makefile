@@ -76,7 +76,7 @@ test: build ## run the tests
 	$(DOCKER_RUN_DOCKER) build/make.sh binary tgz test-unit cover
 
 validate: build ## validate gofmt, go vet
-	$(DOCKER_RUN_DOCKER) build/make.sh validate-gofmt validate-vet
+	$(DOCKER_RUN_DOCKER) build/make.sh validate-gofmt
 
 clean:
 	@docker images | grep '<none>' | awk '{print $3}' | xargs docker rmi 2>/dev/null || true

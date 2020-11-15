@@ -1,0 +1,57 @@
+swagger: '2.0'
+
+info:
+  title: Iota API
+  description: The Iota API exposes operations for managing applications.
+  version: '1'
+
+schemes: [http]
+host: api.example.com
+basePath: /api/v1
+
+paths:
+  /version:
+    get:
+      summary: Version information
+      description: Get the server version information
+      operationId: version
+      produces:
+        - application/json
+      responses:
+        200:
+          description: The version information
+          scheme:
+            $ref: '#/definitions/Version'
+
+securityDefinitions:
+  basicAuth:
+    type: basic
+    description: HTTP Basic Authentication.
+  apiKey:
+    type: apiKey
+    in: header
+    name: authorization
+    description: API key authentication
+
+definitions:
+  Version:
+    type: object
+    properties:
+      Version:
+        type: string
+        description: The server version number.
+      APIVersion:
+        type: string
+        description: The API version number.
+      GitCommit:
+        type: string
+        description: The Git commit of the server build.
+      BuildTime:
+        type: string
+        description: The time of the server build.
+      Os:
+        type: string
+        description: The operating system that the server running.
+      Arch:
+        type: string
+        description: The hardware architecture that the server running.
