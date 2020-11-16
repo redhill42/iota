@@ -11,7 +11,7 @@ import (
 	"github.com/redhill42/iota/cmd/iotacli/cmds"
 	"github.com/redhill42/iota/config"
 	"github.com/redhill42/iota/pkg/colorable"
-	flag "github.com/redhill42/iota/pkg/mflag"
+	"github.com/redhill42/iota/pkg/mflag"
 	"github.com/redhill42/iota/pkg/rest"
 )
 
@@ -25,8 +25,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	flag.Usage = func() {
-		flag.CommandLine.SetOutput(stdout)
+	mflag.Usage = func() {
+		mflag.CommandLine.SetOutput(stdout)
 
 		fmt.Fprint(stdout, "Usage: iotacli [OPTIONS] COMMAND [arg...]\n       iotacli [ --help ]\n")
 
@@ -40,20 +40,20 @@ func main() {
 		fmt.Fprintf(stdout, "%s\n", help)
 
 		fmt.Fprint(stdout, "Options:\n")
-		flag.PrintDefaults()
+		mflag.PrintDefaults()
 		fmt.Fprint(stdout, "\nRun 'iotacli COMMAND --help' for more information on a command.\n")
 	}
 
-	flgHelp := flag.Bool([]string{"h", "-help"}, false, "Print usage")
-	flgDebug := flag.Bool([]string{"D", "-debug"}, false, "Debugging mode")
-	flgHost := flag.String([]string{"H", "-host"}, "", "Connect to remote host")
+	flgHelp := mflag.Bool([]string{"h", "-help"}, false, "Print usage")
+	flgDebug := mflag.Bool([]string{"D", "-debug"}, false, "Debugging mode")
+	flgHost := mflag.String([]string{"H", "-host"}, "", "Connect to remote host")
 
-	flag.Parse()
+	mflag.Parse()
 
 	if *flgHelp {
 		// if global flag --help is present, regardless of what other options
 		// and commands there are, just print the usage
-		flag.Usage()
+		mflag.Usage()
 		return
 	}
 
@@ -73,7 +73,7 @@ func main() {
 	}
 
 	c := cmds.Init(host, stdout, stderr)
-	if err := c.Run(flag.Args()...); err != nil {
+	if err := c.Run(mflag.Args()...); err != nil {
 		if se, ok := err.(rest.ServerError); ok && se.StatusCode() == http.StatusUnauthorized {
 			fmt.Fprintln(stderr, "Your access token has been expired, please login again.")
 		} else {

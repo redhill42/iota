@@ -13,7 +13,7 @@ import (
 	"github.com/redhill42/iota/cmd/iotacli/cmds/ansi"
 	"github.com/redhill42/iota/config"
 	"github.com/redhill42/iota/pkg/cli"
-	flag "github.com/redhill42/iota/pkg/mflag"
+	"github.com/redhill42/iota/pkg/mflag"
 )
 
 // Command is the struct containing the command name and description
@@ -60,7 +60,7 @@ func (c *ClientCli) Command(name string) func(...string) error {
 	return c.handlers[name]
 }
 
-func (c *ClientCli) Subcmd(name string, synopses ...string) *flag.FlagSet {
+func (c *ClientCli) Subcmd(name string, synopses ...string) *mflag.FlagSet {
 	var description string
 	if cmd, ok := Commands[name]; ok {
 		description = cmd.Description

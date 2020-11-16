@@ -1,8 +1,8 @@
 package cmds
 
 import (
-	Cli "github.com/redhill42/iota/pkg/cli"
-	flag "github.com/redhill42/iota/pkg/mflag"
+	"github.com/redhill42/iota/pkg/cli"
+	"github.com/redhill42/iota/pkg/mflag"
 )
 
 // Command is the struct containing the command name and description
@@ -12,7 +12,7 @@ type Command struct {
 }
 
 type ServerCli struct {
-	*Cli.Cli
+	*cli.Cli
 	handlers map[string]func(...string) error
 }
 
@@ -31,24 +31,24 @@ func init() {
 }
 
 func Init() *ServerCli {
-	cli := new(ServerCli)
-	cli.Cli = Cli.New("iota", cli)
-	cli.Description = "IOTA management tool"
-	cli.handlers = map[string]func(...string) error{
-		"api-server": cli.CmdAPIServer,
-		"config":     cli.CmdConfig,
+	c := new(ServerCli)
+	c.Cli = cli.New("iota", c)
+	c.Description = "IOTA management tool"
+	c.handlers = map[string]func(...string) error{
+		"api-server": c.CmdAPIServer,
+		"config":     c.CmdConfig,
 	}
-	return cli
+	return c
 }
 
-func (cli *ServerCli) Command(name string) func(...string) error {
-	return cli.handlers[name]
+func (c *ServerCli) Command(name string) func(...string) error {
+	return c.handlers[name]
 }
 
-func (cli *ServerCli) Subcmd(name string, synopses ...string) *flag.FlagSet {
+func (c *ServerCli) Subcmd(name string, synopses ...string) *mflag.FlagSet {
 	var description string
 	if cmd, ok := Commands[name]; ok {
 		description = cmd.Description
 	}
-	return cli.Cli.Subcmd(name, synopses, description, true)
+	return c.Cli.Subcmd(name, synopses, description, true)
 }
