@@ -32,6 +32,8 @@ type ClientCli struct {
 
 // Commands lists the top level commands and their short usage
 var CommandUsage = []Command{
+	{"login", "Login to a server"},
+	{"logout", "Log out from a server"},
 	{"version", "Show the version information"},
 }
 
@@ -50,9 +52,13 @@ func Init(host string, stdout, stderr io.Writer) *ClientCli {
 	c.host = host
 	c.stdout = stdout
 	c.stderr = stderr
+
 	c.handlers = map[string]func(...string) error{
+		"login":   c.CmdLogin,
+		"logout":  c.CmdLogout,
 		"version": c.CmdVersion,
 	}
+
 	return c
 }
 
@@ -84,6 +90,20 @@ func (c *ClientCli) Connect() (err error) {
 	}
 
 	c.APIClient, err = client.NewAPIClient(c.host+"/api", api.APIVersion, nil, headers)
+	return err
+}
+
+func (c *ClientCli) ConnectAndLogin() (err error) {
+	if err = c.Connect(); err != nil {
+		return err
+	}
+
+	token := config.GetOption(c.host, "token")
+	if token != "" {
+		c.SetToken(token)
+	} else {
+		err = c.authenticate("You must login.", "", "")
+	}
 	return err
 }
 

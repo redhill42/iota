@@ -46,7 +46,7 @@ DOCKER_RUN_DOCKER := $(DOCKER_FLAGS) "$(DOCKER_IMAGE)"
 DOCKER_RUN_VENDOR := $(DOCKER_FLAGS) $(VENDOR_MOUNT) "$(DOCKER_IMAGE)"
 
 default: build gofmt
-	CROSS=linux/amd64 $(DOCKER_RUN_DOCKER) build/make.sh binary
+	CROSS=linux/amd64 $(DOCKER_RUN_DOCKER) build/make.sh binary tgz test-unit
 
 all: build ## validate all checks, build linux binaries, run all test\ncross build non-linux binaries and generate archives
 	$(DOCKER_RUN_DOCKER) build/make.sh

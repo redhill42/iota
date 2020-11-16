@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Sirupsen/logrus"
+	"github.com/redhill42/iota/auth/userdb"
 	"mime"
 	"net/http"
 	"strings"
-
-	"github.com/Sirupsen/logrus"
 )
 
 // key is an unexported type for keys defined in this package
@@ -17,6 +17,9 @@ type key int
 
 // APIVersionKey is the client's requested API version
 const APIVersionKey key = 0
+
+// UserKey is the key for userdb.User values in contexts.
+const UserKey key = 1
 
 // APIFunc is an adapter to allow the use of ordinary functions as API endpoints.
 // Any function that has the appropriate signature can be registered as an API endpoint.
@@ -78,4 +81,16 @@ func VersionFromContext(ctx context.Context) (ver string) {
 		return
 	}
 	return val.(string)
+}
+
+// UserFromContext returns the authenticated user from the context using UserKey.
+func UserFromContext(ctx context.Context) (user *userdb.BasicUser) {
+	if ctx == nil {
+		return
+	}
+	val := ctx.Value(UserKey)
+	if val == nil {
+		return
+	}
+	return val.(*userdb.BasicUser)
 }

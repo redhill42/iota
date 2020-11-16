@@ -13,6 +13,8 @@ import (
 	"github.com/redhill42/iota/api/server"
 	"github.com/redhill42/iota/api/server/middleware"
 	"github.com/redhill42/iota/api/server/router/system"
+	"github.com/redhill42/iota/auth"
+	"github.com/redhill42/iota/auth/userdb"
 )
 
 const _CONTEXT_ROOT = "/api"
@@ -27,6 +29,15 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	stopc := make(chan bool)
 	defer close(stopc)
 
+	users, err := userdb.Open()
+	if err != nil {
+		return err
+	}
+	authz, err := auth.NewAuthenticator(users)
+	if err != nil {
+		return err
+	}
+
 	api := server.New(_CONTEXT_ROOT)
 
 	l, err := net.Listen("tcp", addr)
@@ -35,8 +46,8 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	}
 	api.Accept(addr, l)
 
-	initMiddlewares(api)
-	initRouters(api)
+	initMiddlewares(api, authz)
+	initRouters(api, authz)
 
 	// The serve API routine never exists unless an error occurs
 	// we need to start it as a goroutine and wait on it so
@@ -58,13 +69,14 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	return nil
 }
 
-func initMiddlewares(s *server.Server) {
+func initMiddlewares(s *server.Server, authz *auth.Authenticator) {
 	s.UseMiddleware(middleware.NewVersionMiddleware())
+	s.UseMiddleware(middleware.NewAuthMiddleware(authz, _CONTEXT_ROOT))
 }
 
-func initRouters(s *server.Server) {
+func initRouters(s *server.Server, authz *auth.Authenticator) {
 	s.InitRouter(
-		system.NewRouter(),
+		system.NewRouter(authz),
 	)
 }
 

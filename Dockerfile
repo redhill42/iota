@@ -15,6 +15,9 @@ FROM icloudway/dev:latest
 
 ENV GOPATH /go
 
+ARG PROXY
+RUN http_proxy=${PROXY} https_proxy=${PROXY} go get -u github.com/onsi/ginkgo/ginkgo github.com/onsi/gomega
+
 # Compile Go for cross compilation
 ENV CROSSPLATFORMS \
     linux/amd64 linux/arm \

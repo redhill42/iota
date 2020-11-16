@@ -20,6 +20,8 @@ type ServerCli struct {
 var CommandUsage = []Command{
 	{"api-server", "Start the API server"},
 	{"config", "Get or set a configuration value"},
+	{"useradd", "Add a user"},
+	{"userdel", "Remove a user"},
 }
 
 var Commands = make(map[string]Command)
@@ -37,6 +39,8 @@ func Init() *ServerCli {
 	c.handlers = map[string]func(...string) error{
 		"api-server": c.CmdAPIServer,
 		"config":     c.CmdConfig,
+		"useradd":    c.CmdUserAdd,
+		"userdel":    c.CmdUserDel,
 	}
 	return c
 }

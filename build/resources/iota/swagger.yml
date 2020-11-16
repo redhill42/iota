@@ -22,6 +22,22 @@ paths:
           description: The version information
           scheme:
             $ref: '#/definitions/Version'
+  /auth:
+    post:
+      summary: User authentication
+      description: Authenticate with user name and password
+      operationId: authenticate
+      security:
+        - basicAuth: []
+      produces:
+        - application/json
+      response:
+        200:
+          description: Return access token after successful authentication
+          schema:
+            $ref: '#/definitions/Token'
+        401:
+          description: invalid user name or password
 
 securityDefinitions:
   basicAuth:
@@ -55,3 +71,9 @@ definitions:
       Arch:
         type: string
         description: The hardware architecture that the server running.
+  Token:
+    type: object
+    properties:
+      Token:
+        type: string
+        description: API access token

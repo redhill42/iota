@@ -44,6 +44,7 @@ case $# in
 esac
 
 # the following lines are in sorted order, FYI
+clone git github.com/dgrijalva/jwt-go v3.0.0
 clone git github.com/gorilla/context aed02d124ae4a0e94fea4541c8effd05bf0c8296
 clone git github.com/gorilla/mux 9fa818a44c2bf1396a17f9d5a3c0f6dd39d2ff8e
 clone git github.com/gorilla/securecookie ff356348f74133a59d3e93aa24b5b4551b6fe90d
@@ -53,4 +54,5 @@ clone git github.com/Sirupsen/logrus v0.10.0
 clone git golang.org/x/crypto 5bcd134fee4dd1475da17714aac19c0aa0142e2f https://github.com/golang/crypto.git
 clone git golang.org/x/net 30db96677b74e24b967e23f911eb3364fc61a011 https://github.com/golang/net.git
 clone git gopkg.in/cookieo9/resources-go.v2 d27c04069d0d5dfe11c202dacbf745ae8d1ab181
+clone git gopkg.in/mgo.v2 29cc868a5ca65f401ff318143f9408d02f4799cc
 clone git gopkg.in/yaml.v2 a83829b6f1293c91addabc89d0571c246397bbf4

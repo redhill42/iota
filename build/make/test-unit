@@ -7,6 +7,9 @@ bundle_test_setup() {
     git config --system push.default simple
 
     mkdir -p /data/db
+    chown -R mongodb /data/db
+    local logfile=/var/log/mongodb/mongod.log
+    gosu mongodb mongod --fork --logpath $logfile --bind_ip 127.0.0.1 >/dev/null
 
     start_docker
     bundle_test_cleanup || true
@@ -16,6 +19,7 @@ bundle_test_setup() {
 }
 
 bundle_test_teardown() {
+    gosu mongodb mongod --shutdown
     /etc/init.d/docker stop
 }
 

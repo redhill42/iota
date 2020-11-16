@@ -70,6 +70,8 @@ func main() {
 			config.Set("host", host)
 			config.Save()
 		}
+	} else {
+		host = config.Get("host")
 	}
 
 	c := cmds.Init(host, stdout, stderr)
