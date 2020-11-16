@@ -50,5 +50,7 @@ clone git github.com/gorilla/securecookie ff356348f74133a59d3e93aa24b5b4551b6fe9
 clone git github.com/gorilla/sessions 56ba4b0a11da87516629a57408a5f7e4c8ea7b0b
 clone git github.com/kardianos/osext c2c54e542fb797ad986b31721e1baedf214ca413
 clone git github.com/Sirupsen/logrus v0.10.0
+clone git golang.org/x/crypto 5bcd134fee4dd1475da17714aac19c0aa0142e2f https://github.com/golang/crypto.git
+clone git golang.org/x/net 30db96677b74e24b967e23f911eb3364fc61a011 https://github.com/golang/net.git
 clone git gopkg.in/cookieo9/resources-go.v2 d27c04069d0d5dfe11c202dacbf745ae8d1ab181
 clone git gopkg.in/yaml.v2 a83829b6f1293c91addabc89d0571c246397bbf4
