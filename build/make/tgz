@@ -14,8 +14,8 @@ for d in "$CROSS"/*/*; do
     export GOOS="$(basename "$(dirname "$d")")"
     BINARY_EXTENSION="$(export GOOS && binary_extension)"
     TAR_PATH="$BUILD_PATH/$GOOS/$GOARCH"
-    TGZ="$DEST/$PROJ_SHORTNAME-$VERSION-$GOOS-$GOARCH.tar.gz"
-    DIST="$TAR_PATH/usr/local/$PROJ_SHORTNAME/bin"
+    TGZ="$DEST/$PROJECT-$VERSION-$GOOS-$GOARCH.tar.gz"
+    DIST="$TAR_PATH/usr/local/$PROJECT/bin"
     mkdir -p $DIST
 
     for b in ${BINARIES[@]}; do

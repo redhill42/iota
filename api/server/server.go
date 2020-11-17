@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 
 	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/api/server/middleware"

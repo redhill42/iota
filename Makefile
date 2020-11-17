@@ -1,6 +1,6 @@
-.PHONY: all binary build vendor cross default shell test validate help
+.PHONY: all binary build cross default shell test validate help
 
-PROJECT=github.com/redhill42/iota
+PROJECT=iota
 HOST_OSARCH := $(shell go env GOOS)/$(shell go env GOARCH)
 
 # get OS/Arch of docker engine
@@ -20,19 +20,20 @@ DOCKER_ENVS := \
     -e DOCKER_REGISTRY_MIRROR \
     -e CROSS \
     -e COVER \
-    -e TIMEOUT
+    -e TIMEOUT \
+    -e http_proxy -e https_proxy
 
 # to allow `make BIND_DIR=. shell` or `make BIND_DIR= test`
 # (default to no bind mount if DOCKER_HOST is set)
 BIND_DIR := $(if $(BINDDIR),$(BINDDIR),bundles)
-DOCKER_MOUNT := $(if $(BIND_DIR),-v "$(CURDIR)/$(BIND_DIR):/go/src/$(PROJECT)/$(BIND_DIR)")
-VENDOR_MOUNT := -v "$(CURDIR)/vendor:/go/src/$(PROJECT)/vendor"
+DOCKER_MOUNT := $(if $(BIND_DIR),-v "$(CURDIR)/$(BIND_DIR):/project/$(PROJECT)/$(BIND_DIR)")
+MODULE_MOUNT := -v "$(CURDIR)/modules:/go/pkg/mod"
 
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 GIT_BRANCH_CLEAN := $(shell echo $(GIT_BRANCH) | sed -e "s/[^[:alnum:]]/-/g")
 DOCKER_IMAGE := iota-dev$(if $(GIT_BRANCH_CLEAN),:$(GIT_BRANCH_CLEAN))
 
-DOCKER_FLAGS := docker run --rm -i --privileged $(DOCKER_ENVS) $(DOCKER_MOUNT) -v docker-data:/var/lib/docker
+DOCKER_FLAGS := docker run --rm -i --privileged $(DOCKER_ENVS) $(DOCKER_MOUNT) $(MODULE_MOUNT) -v docker-data:/var/lib/docker
 
 # if this session isn't interactive, then we don't want to allocate a
 # TTY, which would fail, but if it is interactive, we do want to attach
@@ -43,7 +44,6 @@ ifeq ($(INTERACTIVE), 1)
 endif
 
 DOCKER_RUN_DOCKER := $(DOCKER_FLAGS) "$(DOCKER_IMAGE)"
-DOCKER_RUN_VENDOR := $(DOCKER_FLAGS) $(VENDOR_MOUNT) "$(DOCKER_IMAGE)"
 
 default: build gofmt
 	CROSS=$(HOST_OSARCH) $(DOCKER_RUN_DOCKER) build/make.sh binary
@@ -53,9 +53,6 @@ all: build ## validate all checks, build linux binaries, run all test\ncross bui
 
 build: bundles
 	docker build ${DOCKER_BUILD_ARGS} -t "$(DOCKER_IMAGE)" -f "$(DOCKERFILE)" .
-
-vendor: build ## update vendored dependencies
-	$(DOCKER_RUN_VENDOR) build/vendor.sh
 
 gofmt:
 	@build/gofmt.sh

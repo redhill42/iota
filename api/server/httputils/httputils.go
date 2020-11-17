@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Sirupsen/logrus"
 	"github.com/redhill42/iota/auth/userdb"
+	"github.com/sirupsen/logrus"
 	"mime"
 	"net/http"
 	"strings"
@@ -66,7 +66,7 @@ func ParseForm(r *http.Request) error {
 func MatchesContentType(contentType, expectedType string) bool {
 	mimeType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		logrus.WithError(err).Error("Error parsing media type: %s", contentType)
+		logrus.WithError(err).Errorf("Error parsing media type: %s", contentType)
 	}
 	return err == nil && mimeType == expectedType
 }

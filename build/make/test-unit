@@ -57,17 +57,11 @@ bundle_test_unit() {
         TEST_PATH=./${TESTDIRS}
     fi
 
-    pkg_list=$(go list -e \
-        -f '{{if ne .Name "$PROJECT"}}
-            {{.ImportPath}}
-            {{end}}' \
-        "${BUILDFLAGS[@]}" $TEST_PATH \
-        | grep $PROJECT \
-        | grep -v $PROJECT/vendor)
+	pkg_list=$(go list -e -f '{{.Dir}}' "${BUILDFLAGS[@]}" $TEST_PATH)
 
     test_pkg_list=()
     for pkg in $pkg_list; do
-        if [ -n "$(find ../../../$pkg -name "*_test.go")" ]; then
+        if [ -n "$(find $pkg -name "*_test.go")" ]; then
             test_pkg_list+=( $pkg )
         fi
     done

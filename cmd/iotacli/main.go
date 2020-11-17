@@ -7,12 +7,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/redhill42/iota/cmd/iotacli/cmds"
 	"github.com/redhill42/iota/config"
 	"github.com/redhill42/iota/pkg/colorable"
 	"github.com/redhill42/iota/pkg/mflag"
 	"github.com/redhill42/iota/pkg/rest"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {

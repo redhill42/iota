@@ -6,7 +6,7 @@ bundle_cover() {
         if [ -e $p ]; then
             pkg=$(basename $p)
             pkg=${pkg//-/\/}
-            pkg=${pkg#$PROJECT/}
+            pkg=${pkg#$PROJECT_PATH/}
             mkdir -p "$DEST/$pkg"
             go tool cover -html="$p" -o "$DEST/$pkg/coverage.html"
         fi

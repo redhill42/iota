@@ -76,7 +76,7 @@ func (db *fileDB) Search(filter interface{}, result interface{}) error {
 
 func (db *fileDB) Remove(name string) error {
 	if db.GetOption("users", name) == "" {
-		return userdb.UserNotFoundError(name);
+		return userdb.UserNotFoundError(name)
 	}
 	db.RemoveOption("users", name)
 	return db.Save()

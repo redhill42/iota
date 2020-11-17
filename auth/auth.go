@@ -2,10 +2,10 @@ package auth
 
 import (
 	"crypto/rand"
-	"github.com/Sirupsen/logrus"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
 	"github.com/redhill42/iota/auth/userdb"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 )

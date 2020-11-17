@@ -2,13 +2,13 @@ package ansi
 
 import (
 	"fmt"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 	"os"
 	"strconv"
 	"strings"
 )
 
-var IsTerminal = terminal.IsTerminal(int(os.Stdout.Fd()))
+var IsTerminal = term.IsTerminal(int(os.Stdout.Fd()))
 
 // Color defines a custom color object which is defined by SGR parameters.
 type Color struct {

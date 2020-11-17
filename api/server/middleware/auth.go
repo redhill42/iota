@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/auth"
+	"github.com/sirupsen/logrus"
 )
 
 type authMiddleware struct {
@@ -32,7 +32,7 @@ func (m authMiddleware) WrapHandler(handler httputils.APIFunc) httputils.APIFunc
 			return nil
 		}
 
-		logrus.Debugf("Logged in user: %s", user)
+		logrus.Debugf("Logged in user: %s", user.Name)
 		ctx := context.WithValue(r.Context(), httputils.UserKey, user)
 		return handler(w, r.WithContext(ctx), vars)
 	}

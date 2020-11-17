@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"syscall"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/redhill42/iota/api/server"
 	"github.com/redhill42/iota/api/server/middleware"
@@ -65,6 +65,9 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	if apiErr != nil {
 		logrus.WithError(apiErr).Error("API server error")
 	}
+
+	// Cleanup
+	users.Close()
 	logrus.Info("API server terminated")
 	return nil
 }

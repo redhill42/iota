@@ -1,12 +1,12 @@
 package system
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/redhill42/iota/api"
 	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/api/server/router"
 	"github.com/redhill42/iota/api/types"
 	"github.com/redhill42/iota/auth"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"runtime"
 )

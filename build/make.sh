@@ -21,8 +21,9 @@ set -e
 
 set -o pipefail
 
-export PROJECT=github.com/redhill42/iota
-export PROJ_SHORTNAME=iota
+export PROJECT=iota
+export PROJECT_PATH=/project/iota
+export PROJECT_REPO=github.com/redhill42/iota
 export BINARIES=(iota iotacli)
 
 export SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -35,7 +36,7 @@ if [ "$(go env GOHOSTOS)" = 'windows' ]; then
         unset inContainer
     fi
 else
-    if [ "$PWD" != "/go/src/$PROJECT" ] || [ -z "$CROSSPLATFORMS" ]; then
+    if [ "$PWD" != "$PROJECT_PATH" ] || [ -z "$CROSSPLATFORMS" ]; then
         unset inContainer
     fi
 fi
@@ -90,16 +91,8 @@ if [ -z $BUILDTIME ]; then
     BUILDTIME=$(date -u)
 fi
 
-if [ "$AUTO_GOPATH" ]; then
-    rm -rf .gopath
-    mkdir -p .gopath/src/"$(dirname "${PROJECT}")"
-    ln -sf ../../../.. .gopath/src/"${PROJECT}"
-    export GOPATH="${PWD}/.gopath"
-fi
-
 if [ ! "$GOPATH" ]; then
     echo >&2 'error: missing GOPATH; please see https://golang.org/doc/code.html#GOPATH'
-    echo >&2 '  alternatively, set AUTO_GOPATH=1'
     exit 1
 fi
 

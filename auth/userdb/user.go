@@ -11,9 +11,9 @@ type User interface {
 
 // The basic user interface implementation
 type BasicUser struct {
-	Name      string
-	Password  []byte
-	Inactive  bool
+	Name     string
+	Password []byte
+	Inactive bool
 }
 
 func (user *BasicUser) Basic() *BasicUser {
