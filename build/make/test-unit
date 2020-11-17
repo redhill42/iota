@@ -14,8 +14,6 @@ bundle_test_setup() {
     start_docker
     bundle_test_cleanup || true
     source "${MAKEDIR}/.ensure-images"
-
-    tar -xf "$DEST/../tgz/$PROJ_SHORTNAME-$VERSION-linux-amd64.tar.gz" --strip-components=1 -C /
 }
 
 bundle_test_teardown() {

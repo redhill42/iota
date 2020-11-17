@@ -46,7 +46,7 @@ DOCKER_RUN_DOCKER := $(DOCKER_FLAGS) "$(DOCKER_IMAGE)"
 DOCKER_RUN_VENDOR := $(DOCKER_FLAGS) $(VENDOR_MOUNT) "$(DOCKER_IMAGE)"
 
 default: build gofmt
-	CROSS=linux/amd64 $(DOCKER_RUN_DOCKER) build/make.sh binary tgz test-unit
+	CROSS=$(HOST_OSARCH) $(DOCKER_RUN_DOCKER) build/make.sh binary
 
 all: build ## validate all checks, build linux binaries, run all test\ncross build non-linux binaries and generate archives
 	$(DOCKER_RUN_DOCKER) build/make.sh
@@ -73,7 +73,7 @@ shell: build ## start a shell inside the build env
 	$(DOCKER_RUN_DOCKER) bash
 
 test: build ## run the tests
-	$(DOCKER_RUN_DOCKER) build/make.sh binary tgz test-unit cover
+	CROSS=linux/amd64 $(DOCKER_RUN_DOCKER) build/make.sh binary test-unit cover
 
 validate: build ## validate gofmt, go vet
 	$(DOCKER_RUN_DOCKER) build/make.sh validate-gofmt

@@ -18,11 +18,14 @@ ENV GOPATH /go
 ARG PROXY
 RUN http_proxy=${PROXY} https_proxy=${PROXY} go get -u github.com/onsi/ginkgo/ginkgo github.com/onsi/gomega
 
+# Work around for OSXCROSS issue
+RUN cd /osxcross/target/SDK/MacOSX10.11.sdk/usr/include/c++ && ln -s 4.2.1 v1
+
 # Compile Go for cross compilation
 ENV CROSSPLATFORMS \
     linux/amd64 linux/arm \
+    darwin/amd64 \
     windows/amd64
-#    darwin/amd64 #FIXME
 
 WORKDIR /go/src/github.com/redhill42/iota
 
