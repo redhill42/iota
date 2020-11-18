@@ -48,7 +48,7 @@ DOCKER_RUN_DOCKER := $(DOCKER_FLAGS) "$(DOCKER_IMAGE)"
 default: build gofmt
 	CROSS=$(HOST_OSARCH) $(DOCKER_RUN_DOCKER) build/make.sh binary
 
-all: build ## validate all checks, build linux binaries, run all test\ncross build non-linux binaries and generate archives
+all: build ## validate all checks, cross build the binaries, \nrun all test and generate archives
 	$(DOCKER_RUN_DOCKER) build/make.sh
 
 build: bundles
@@ -60,7 +60,7 @@ gofmt:
 bundles:
 	mkdir bundles
 
-binary: build ## cross build the binaries for darwin, freebsd and windows
+binary: build ## cross build the binaries for linux, darwin and windows
 	$(DOCKER_RUN_DOCKER) build/make.sh binary
 
 tgz: build ## build the archive containing the binaries
@@ -73,7 +73,7 @@ test: build ## run the tests
 	CROSS=linux/amd64 $(DOCKER_RUN_DOCKER) build/make.sh binary test-unit cover
 
 validate: build ## validate gofmt, go vet
-	$(DOCKER_RUN_DOCKER) build/make.sh validate-gofmt
+	$(DOCKER_RUN_DOCKER) build/make.sh validate-gofmt validate-vet
 
 clean:
 	@docker images | grep '<none>' | awk '{print $3}' | xargs docker rmi 2>/dev/null || true
