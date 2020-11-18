@@ -85,11 +85,6 @@ func (e UserNotFoundError) HTTPErrorStatusCode() int {
 	return http.StatusNotFound
 }
 
-func IsUserNotFound(err error) bool {
-	_, ok := err.(UserNotFoundError)
-	return ok
-}
-
 func (e InactiveUserError) Error() string {
 	return fmt.Sprintf("You cannot login using this identity: %s", string(e))
 }

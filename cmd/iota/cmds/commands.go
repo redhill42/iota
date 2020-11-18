@@ -18,7 +18,7 @@ type ServerCli struct {
 
 // Commands lists the top level commands and their short usage
 var CommandUsage = []Command{
-	{"api-server", "Start the API server"},
+	{"apiserver", "Start the API server"},
 	{"config", "Get or set a configuration value"},
 	{"useradd", "Add a user"},
 	{"userdel", "Remove a user"},
@@ -37,10 +37,10 @@ func Init() *ServerCli {
 	c.Cli = cli.New("iota", c)
 	c.Description = "IOTA management tool"
 	c.handlers = map[string]func(...string) error{
-		"api-server": c.CmdAPIServer,
-		"config":     c.CmdConfig,
-		"useradd":    c.CmdUserAdd,
-		"userdel":    c.CmdUserDel,
+		"apiserver": c.CmdAPIServer,
+		"config":    c.CmdConfig,
+		"useradd":   c.CmdUserAdd,
+		"userdel":   c.CmdUserDel,
 	}
 	return c
 }

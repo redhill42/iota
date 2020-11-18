@@ -10,7 +10,6 @@ import (
 
 	"github.com/redhill42/iota/api"
 	"github.com/redhill42/iota/api/client"
-	"github.com/redhill42/iota/cmd/iotacli/cmds/ansi"
 	"github.com/redhill42/iota/config"
 	"github.com/redhill42/iota/pkg/cli"
 	"github.com/redhill42/iota/pkg/mflag"
@@ -24,8 +23,9 @@ type Command struct {
 
 type ClientCli struct {
 	*cli.Cli
-	host string
 	*client.APIClient
+
+	host           string
 	stdout, stderr io.Writer
 	handlers       map[string]func(...string) error
 }
@@ -110,7 +110,7 @@ func (c *ClientCli) ConnectAndLogin() (err error) {
 func (cli *ClientCli) confirm(prompt string) bool {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Fprintf(cli.stdout, ansi.Danger("WARNING")+": "+prompt+", continue (yes/no)? ")
+		fmt.Fprintf(cli.stdout, "WARNING: "+prompt+", continue (yes/no)? ")
 		answer, err := reader.ReadString('\n')
 		if err == io.EOF {
 			return false

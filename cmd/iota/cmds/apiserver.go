@@ -22,7 +22,7 @@ const _CONTEXT_ROOT = "/api"
 func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	var addr string
 
-	cmd := cli.Subcmd("api-server")
+	cmd := cli.Subcmd("apiserver")
 	cmd.StringVar(&addr, []string{"-bind"}, ":8080", "API server bind address")
 	cmd.ParseFlags(args, true)
 

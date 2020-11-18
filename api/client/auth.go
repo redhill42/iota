@@ -9,7 +9,7 @@ import (
 func (api *APIClient) Authenticate(ctx context.Context, username, password string) (token string, err error) {
 	auth := string(base64.StdEncoding.EncodeToString([]byte(username + ":" + password)))
 	headers := map[string][]string{"Authorization": {"Basic " + auth}}
-	resp, err := api.cli.Post(ctx, "/auth", nil, nil, headers)
+	resp, err := api.Post(ctx, "/auth", nil, nil, headers)
 	if err == nil {
 		var tokenJson map[string]string
 		err = json.NewDecoder(resp.Body).Decode(&tokenJson)
@@ -21,8 +21,8 @@ func (api *APIClient) Authenticate(ctx context.Context, username, password strin
 
 func (api *APIClient) SetToken(token string) {
 	if token != "" {
-		api.cli.AddCustomHeader("Authorization", "bearer "+token)
+		api.AddCustomHeader("Authorization", "bearer "+token)
 	} else {
-		api.cli.RemoveCustomHeader("Authorization")
+		api.RemoveCustomHeader("Authorization")
 	}
 }

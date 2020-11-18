@@ -6,7 +6,7 @@ import (
 )
 
 type APIClient struct {
-	cli *rest.Client
+	*rest.Client
 }
 
 func NewAPIClient(host, version string, client *http.Client, httpHeaders map[string]string) (*APIClient, error) {
