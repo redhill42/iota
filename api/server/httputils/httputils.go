@@ -43,6 +43,20 @@ func CheckForJSON(r *http.Request) error {
 	return fmt.Errorf("Content-Type specified (%s) must be 'application/json'", ct)
 }
 
+// ReadJSON reads the value from http request stream as json with standard json encoding.
+func ReadJSON(r *http.Request, v interface{}) (err error) {
+	if err = ParseForm(r); err != nil {
+		return NewStatusError(http.StatusBadRequest, err)
+	}
+	if err = CheckForJSON(r); err != nil {
+		return NewStatusError(http.StatusBadRequest, err)
+	}
+	if err = json.NewDecoder(r.Body).Decode(v); err != nil {
+		return NewStatusError(http.StatusBadRequest, err)
+	}
+	return nil
+}
+
 // WriteJSON writes the value to the http response stream as json with standard json encoding.
 func WriteJSON(w http.ResponseWriter, code int, v interface{}) error {
 	w.Header().Set("Content-Type", "application/json")

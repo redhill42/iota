@@ -14,19 +14,26 @@ type httpStatusError interface {
 	HTTPErrorStatusCode() int
 }
 
-type statusError int
+type statusError struct {
+	code int
+	err  error
+}
 
 func (se statusError) Error() string {
-	return http.StatusText(int(se))
+	if se.err != nil {
+		return se.err.Error()
+	} else {
+		return http.StatusText(se.code)
+	}
 }
 
 func (se statusError) HTTPErrorStatusCode() int {
-	return int(se)
+	return se.code
 }
 
 // NewStatusError returns a error object with HTTP status code.
-func NewStatusError(code int) error {
-	return statusError(code)
+func NewStatusError(code int, err error) error {
+	return statusError{code, err}
 }
 
 // GetHTTPErrorStatusCode retrieve status code from error message

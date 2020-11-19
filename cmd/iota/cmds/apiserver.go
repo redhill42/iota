@@ -12,9 +12,11 @@ import (
 
 	"github.com/redhill42/iota/api/server"
 	"github.com/redhill42/iota/api/server/middleware"
+	"github.com/redhill42/iota/api/server/router/devices"
 	"github.com/redhill42/iota/api/server/router/system"
 	"github.com/redhill42/iota/auth"
 	"github.com/redhill42/iota/auth/userdb"
+	"github.com/redhill42/iota/device"
 )
 
 const _CONTEXT_ROOT = "/api"
@@ -37,6 +39,10 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	if err != nil {
 		return err
 	}
+	devmgr, err := device.NewDeviceManager()
+	if err != nil {
+		return err
+	}
 
 	api := server.New(_CONTEXT_ROOT)
 
@@ -46,8 +52,15 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	}
 	api.Accept(addr, l)
 
-	initMiddlewares(api, authz)
-	initRouters(api, authz)
+	// Initialize middlewares
+	api.UseMiddleware(middleware.NewVersionMiddleware())
+	api.UseMiddleware(middleware.NewAuthMiddleware(authz, _CONTEXT_ROOT))
+
+	// Initialize routers
+	api.InitRouter(
+		system.NewRouter(authz),
+		devices.NewRouter(devmgr),
+	)
 
 	// The serve API routine never exists unless an error occurs
 	// we need to start it as a goroutine and wait on it so
@@ -68,19 +81,9 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 
 	// Cleanup
 	users.Close()
+	devmgr.Close()
 	logrus.Info("API server terminated")
 	return nil
-}
-
-func initMiddlewares(s *server.Server, authz *auth.Authenticator) {
-	s.UseMiddleware(middleware.NewVersionMiddleware())
-	s.UseMiddleware(middleware.NewAuthMiddleware(authz, _CONTEXT_ROOT))
-}
-
-func initRouters(s *server.Server, authz *auth.Authenticator) {
-	s.InitRouter(
-		system.NewRouter(authz),
-	)
 }
 
 func trapSignals(cleanup func()) {
