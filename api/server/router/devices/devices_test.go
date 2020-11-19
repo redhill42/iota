@@ -1,15 +1,18 @@
 package devices
 
 import (
-	"net/http"
-	"testing"
-	"os"
 	"bytes"
 	"encoding/json"
+	"net/http"
+	"os"
+	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/gorilla/mux"
+	"github.com/redhill42/iota/api/server"
+	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/device"
 )
 
@@ -19,122 +22,117 @@ func TestDevicesRouter(t *testing.T) {
 	RunSpecs(t, "Devices Router Suite")
 }
 
-type FakeWriter struct {
-	header http.Header
-	body bytes.Buffer
+type fakeWriter struct {
+	header     http.Header
+	body       bytes.Buffer
+	statusCode int
 }
 
-func (w *FakeWriter) Header() http.Header {
+func (w *fakeWriter) Header() http.Header {
 	if w.header == nil {
 		w.header = make(http.Header)
 	}
 	return w.header
 }
 
-func (w *FakeWriter) Write(p []byte) (int, error) {
+func (w *fakeWriter) Write(p []byte) (int, error) {
 	return w.body.Write(p)
 }
 
-func (w *FakeWriter) WriteHeader(statusCode int) {
-	// don't actually write
+func (w *fakeWriter) WriteHeader(statusCode int) {
+	w.statusCode = statusCode
+}
+
+func (w *fakeWriter) Err(id string) error {
+	switch w.statusCode {
+	case http.StatusOK, http.StatusNoContent:
+		return nil
+	case http.StatusNotFound:
+		return device.DeviceNotFoundError(id)
+	case http.StatusConflict:
+		return device.DuplicateDeviceError(id)
+	default:
+		return httputils.NewStatusError(w.statusCode, nil)
+	}
 }
 
 var _ = Describe("DevicesRouter", func() {
-	var manager *device.DeviceManager
-	var router *devicesRouter
+	var mgr *device.DeviceManager
+	var mux *mux.Router
 
 	BeforeEach(func() {
 		var err error
 
-		manager, err = device.NewDeviceManager()
+		mgr, err = device.NewDeviceManager()
 		Expect(err).NotTo(HaveOccurred())
-		router = NewRouter(manager).(*devicesRouter)
+
+		srv := server.New("")
+		srv.InitRouter(NewRouter(mgr))
+		mux = srv.Mux
 	})
 
 	AfterEach(func() {
-		manager.Close()
+		mgr.Close()
 	})
+
+	makeRequest := func(method, path, id string, req interface{}, res interface{}) error {
+		var r *http.Request
+		var err error
+
+		if req != nil {
+			var reqBody bytes.Buffer
+			err = json.NewEncoder(&reqBody).Encode(req)
+			if err != nil {
+				return err
+			}
+			r, err = http.NewRequest(method, path, &reqBody)
+			if err == nil {
+				r.Header.Set("Content-Type", "application/json")
+			}
+		} else {
+			r, err = http.NewRequest(method, path, nil)
+		}
+		if err != nil {
+			return err
+		}
+
+		w := fakeWriter{}
+		mux.ServeHTTP(&w, r)
+
+		if err = w.Err(id); err == nil && res != nil {
+			err = json.NewDecoder(&w.body).Decode(res)
+		}
+		return err
+	}
 
 	createDevice := func(id string, attributes map[string]interface{}) (string, error) {
 		req := make(map[string]interface{})
 		for k, v := range attributes {
 			req[k] = v
 		}
-		if (id != "") {
+		if id != "" {
 			req["id"] = id
 		}
 
-		var reqBody bytes.Buffer
-		err := json.NewEncoder(&reqBody).Encode(req)
-		if err != nil {
-			return "", err
-		}
+		res := struct {
+			Token string `json:"token"`
+		}{}
 
-		r, err := http.NewRequest("POST", "/devices/", &reqBody)
-		if err != nil {
-			return "", err
-		}
-		r.Header.Set("Content-Type", "application/json")
-
-		w := FakeWriter{}
-		err = router.create(&w, r, nil)
-		if err != nil {
-			return "", err
-		}
-
-		var res map[string]string
-		err = json.NewDecoder(&w.body).Decode(&res)
-		if err != nil {
-			return "", err
-		}
-
-		token, ok := res["token"]
-		Expect(ok).To(BeTrue())
-		return token, nil
+		err := makeRequest("POST", "/devices/", id, req, &res)
+		return res.Token, err
 	}
 
-	getDevice := func(id string) (map[string]interface{}, error) {
-		r, err := http.NewRequest("GET", "/devices/"+id, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		w := FakeWriter{}
-		err = router.read(&w, r, map[string]string{"id": id})
-		if err != nil {
-			return nil, err
-		}
-
-		var res map[string]interface{}
-		err = json.NewDecoder(&w.body).Decode(&res)
-		return res, err
+	getDevice := func(id string) (res map[string]interface{}, err error) {
+		err = makeRequest("GET", "/devices/"+id, id, nil, &res)
+		return
 	}
 
 	updateDevice := func(id string, updates map[string]interface{}) error {
-		var reqBody bytes.Buffer
-		err := json.NewEncoder(&reqBody).Encode(updates)
-		if err != nil {
-			return err
-		}
-
-		r, err := http.NewRequest("POST", "/devices/"+id, &reqBody)
-		if err != nil {
-			return err
-		}
-		r.Header.Set("Content-Type", "application/json")
-
-		w := FakeWriter{}
-		return router.update(&w, r, map[string]string{"id": id})
+		return makeRequest("POST", "/devices/"+id, id, updates, nil)
 	}
 
 	deleteDevice := func(id string) error {
-		r, err := http.NewRequest("DELETE", "/devices/"+id, nil)
-		if err != nil {
-			return err
-		}
-
-		w := FakeWriter{}
-		return router.delete(&w, r, map[string]string{"id": id})
+		return makeRequest("DELETE", "/devices/"+id, id, nil, nil)
 	}
 
 	Describe("Create device", func() {
@@ -160,7 +158,7 @@ var _ = Describe("DevicesRouter", func() {
 	Describe("Get device", func() {
 		It("should success for existing device", func() {
 			deviceId := "get-device-test"
-			attributes := map[string]interface{} {
+			attributes := map[string]interface{}{
 				"att1": "value1",
 				"att2": "value2",
 				"att3": "value3",

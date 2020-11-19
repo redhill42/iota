@@ -81,9 +81,19 @@ func (dr *devicesRouter) update(w http.ResponseWriter, r *http.Request, vars map
 	if err = httputils.ReadJSON(r, &req); err != nil {
 		return err
 	}
-	return dr.mgr.Update(vars["id"], req)
+	if err = dr.mgr.Update(vars["id"], req); err != nil {
+		return err
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
 }
 
 func (dr *devicesRouter) delete(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	return dr.mgr.Remove(vars["id"])
+	if err := dr.mgr.Remove(vars["id"]); err != nil {
+		return err
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
 }

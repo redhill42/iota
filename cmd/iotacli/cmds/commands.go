@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/redhill42/iota/api"
 	"github.com/redhill42/iota/api/client"
+	"github.com/redhill42/iota/cmd/iotacli/cmds/ansi"
+	"github.com/redhill42/iota/cmd/iotacli/cmds/prettyjson"
 	"github.com/redhill42/iota/config"
 	"github.com/redhill42/iota/pkg/cli"
 	"github.com/redhill42/iota/pkg/mflag"
@@ -35,6 +38,9 @@ var CommandUsage = []Command{
 	{"login", "Login to a server"},
 	{"logout", "Log out from a server"},
 	{"version", "Show the version information"},
+	{"device", "list devices or show device attributes"},
+	{"device:create", "Create device"},
+	{"device:delete", "permanently remove a device"},
 }
 
 var Commands = make(map[string]Command)
@@ -54,9 +60,12 @@ func Init(host string, stdout, stderr io.Writer) *ClientCli {
 	c.stderr = stderr
 
 	c.handlers = map[string]func(...string) error{
-		"login":   c.CmdLogin,
-		"logout":  c.CmdLogout,
-		"version": c.CmdVersion,
+		"login":         c.CmdLogin,
+		"logout":        c.CmdLogout,
+		"version":       c.CmdVersion,
+		"device":        c.CmdDevice,
+		"device:create": c.CmdDeviceCreate,
+		"device:delete": c.CmdDeviceDelete,
 	}
 
 	return c
@@ -126,5 +135,15 @@ func (cli *ClientCli) confirm(prompt string) bool {
 			return true
 		}
 		fmt.Fprintln(cli.stdout, "Please answer yes or no.")
+	}
+}
+
+func (cli *ClientCli) writeJson(v interface{}) {
+	if ansi.IsTerminal {
+		b, _ := prettyjson.Marshal(v)
+		cli.stdout.Write(b)
+		fmt.Fprintln(cli.stdout)
+	} else {
+		json.NewEncoder(os.Stdout).Encode(v)
 	}
 }
