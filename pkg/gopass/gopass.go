@@ -77,7 +77,7 @@ func getPasswd(masked bool) ([]byte, error) {
 		err = ErrMaxLengthExceeded
 	}
 
-	fmt.Println()
+	fmt.Print("\r\n")
 	return pass, err
 }
 

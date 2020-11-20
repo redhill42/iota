@@ -6,6 +6,7 @@ import (
 
 	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/api/server/router"
+	"github.com/redhill42/iota/api/types"
 	"github.com/redhill42/iota/device"
 )
 
@@ -60,9 +61,7 @@ func (dr *devicesRouter) create(w http.ResponseWriter, r *http.Request, vars map
 	if err = dr.mgr.Create(id, token, req); err != nil {
 		return err
 	}
-	return httputils.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"token": token,
-	})
+	return httputils.WriteJSON(w, http.StatusOK, types.Token{token})
 }
 
 func (dr *devicesRouter) read(w http.ResponseWriter, r *http.Request, vars map[string]string) error {

@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/redhill42/iota/api/server"
 	"github.com/redhill42/iota/api/server/httputils"
+	"github.com/redhill42/iota/api/types"
 	"github.com/redhill42/iota/device"
 )
 
@@ -114,10 +115,7 @@ var _ = Describe("DevicesRouter", func() {
 			req["id"] = id
 		}
 
-		res := struct {
-			Token string `json:"token"`
-		}{}
-
+		var res types.Token
 		err := makeRequest("POST", "/devices/", id, req, &res)
 		return res.Token, err
 	}

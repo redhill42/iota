@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"github.com/redhill42/iota/api/types"
 )
 
 func (api *APIClient) GetDevices(ctx context.Context) ([]string, error) {
@@ -25,9 +26,7 @@ func (api *APIClient) GetDevice(ctx context.Context, id string, info interface{}
 }
 
 func (api *APIClient) CreateDevice(ctx context.Context, attributes interface{}) (token string, err error) {
-	v := struct {
-		Token string `json:"token"`
-	}{}
+	var v types.Token
 
 	resp, err := api.Post(ctx, "/devices/", nil, attributes, nil)
 	if err == nil {

@@ -82,6 +82,5 @@ func (c *ClientCli) authenticate(prompt, username, password string) (err error) 
 
 	c.SetToken(token)
 	config.AddOption(c.host, "token", token)
-	config.Save()
-	return nil
+	return config.Save()
 }

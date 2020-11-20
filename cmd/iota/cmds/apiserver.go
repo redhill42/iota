@@ -35,14 +35,18 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	if err != nil {
 		return err
 	}
+	defer users.Close()
+
 	authz, err := auth.NewAuthenticator(users)
 	if err != nil {
 		return err
 	}
+
 	devmgr, err := device.NewDeviceManager()
 	if err != nil {
 		return err
 	}
+	defer devmgr.Close()
 
 	api := server.New(_CONTEXT_ROOT)
 
@@ -78,10 +82,6 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	if apiErr != nil {
 		logrus.WithError(apiErr).Error("API server error")
 	}
-
-	// Cleanup
-	users.Close()
-	devmgr.Close()
 	logrus.Info("API server terminated")
 	return nil
 }

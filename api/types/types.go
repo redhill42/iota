@@ -10,3 +10,9 @@ type Version struct {
 	Os         string
 	Arch       string
 }
+
+// Token represents an access token signed by server to
+// identify a client entity.
+type Token struct {
+	Token string `json:"token"`
+}
