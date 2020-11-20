@@ -16,11 +16,11 @@ import (
 
 type Broker struct {
 	client mqtt.Client
-	mux    *mux.Router
+	Mux    *mux.Router
 	qos    byte
 }
 
-func NewBroker(mux *mux.Router) (*Broker, error) {
+func NewBroker() (*Broker, error) {
 	broker := new(Broker)
 	opts := broker.configure()
 
@@ -41,7 +41,6 @@ func NewBroker(mux *mux.Router) (*Broker, error) {
 	// for example, the MQTT topic "api/v1/XXX/post/me/attributes" will
 	// forwarded to API server with URL "/api/v1/me/attributes".
 
-	broker.mux = mux
 	if token := broker.client.Subscribe("api/+/+/+/#", broker.qos, broker.serveMQTT); token.Wait() && token.Error() != nil {
 		return nil, token.Error()
 	}
@@ -130,5 +129,5 @@ func (broker *Broker) serveMQTT(client mqtt.Client, msg mqtt.Message) {
 	}
 
 	w := fakeWriter{}
-	broker.mux.ServeHTTP(&w, r)
+	broker.Mux.ServeHTTP(&w, r)
 }

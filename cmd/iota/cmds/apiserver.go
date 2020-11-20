@@ -8,19 +8,9 @@ import (
 	"sync/atomic"
 	"syscall"
 
-	"github.com/sirupsen/logrus"
-
-	"github.com/redhill42/iota/api/mqtt"
 	"github.com/redhill42/iota/api/server"
-	"github.com/redhill42/iota/api/server/middleware"
-	"github.com/redhill42/iota/api/server/router/devices"
-	"github.com/redhill42/iota/api/server/router/system"
-	"github.com/redhill42/iota/auth"
-	"github.com/redhill42/iota/auth/userdb"
-	"github.com/redhill42/iota/device"
+	"github.com/sirupsen/logrus"
 )
-
-const _CONTEXT_ROOT = "/api"
 
 func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	var addr string
@@ -32,47 +22,17 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	stopc := make(chan bool)
 	defer close(stopc)
 
-	users, err := userdb.Open()
+	api, err := server.NewAPIServer()
 	if err != nil {
 		return err
 	}
-	defer users.Close()
-
-	authz, err := auth.NewAuthenticator(users)
-	if err != nil {
-		return err
-	}
-
-	devmgr, err := device.NewDeviceManager()
-	if err != nil {
-		return err
-	}
-	defer devmgr.Close()
-
-	api := server.New(_CONTEXT_ROOT)
+	defer api.Cleanup()
 
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 	api.Accept(addr, l)
-
-	// Initialize middlewares
-	api.UseMiddleware(middleware.NewVersionMiddleware())
-	api.UseMiddleware(middleware.NewAuthMiddleware(authz, devmgr, _CONTEXT_ROOT))
-
-	// Initialize routers
-	api.InitRouter(
-		system.NewRouter(authz),
-		devices.NewRouter(devmgr),
-	)
-
-	// Route MQTT request to API server
-	broker, err := mqtt.NewBroker(api.Mux)
-	if err != nil {
-		return err
-	}
-	defer broker.Close()
 
 	// The serve API routine never exists unless an error occurs
 	// we need to start it as a goroutine and wait on it so

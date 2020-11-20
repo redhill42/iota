@@ -1,4 +1,4 @@
-package devices
+package devices_test
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/redhill42/iota/api/server"
 	"github.com/redhill42/iota/api/server/httputils"
+	"github.com/redhill42/iota/api/server/router/devices"
 	"github.com/redhill42/iota/api/types"
 	"github.com/redhill42/iota/device"
 )
@@ -68,7 +69,7 @@ var _ = Describe("DevicesRouter", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		srv := server.New("")
-		srv.InitRouter(NewRouter(mgr))
+		srv.InitRouter(devices.NewRouter(mgr))
 		mux = srv.Mux
 	})
 
