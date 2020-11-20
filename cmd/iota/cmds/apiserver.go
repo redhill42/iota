@@ -10,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/redhill42/iota/api/mqtt"
 	"github.com/redhill42/iota/api/server"
 	"github.com/redhill42/iota/api/server/middleware"
 	"github.com/redhill42/iota/api/server/router/devices"
@@ -58,13 +59,20 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 
 	// Initialize middlewares
 	api.UseMiddleware(middleware.NewVersionMiddleware())
-	api.UseMiddleware(middleware.NewAuthMiddleware(authz, _CONTEXT_ROOT))
+	api.UseMiddleware(middleware.NewAuthMiddleware(authz, devmgr, _CONTEXT_ROOT))
 
 	// Initialize routers
 	api.InitRouter(
 		system.NewRouter(authz),
 		devices.NewRouter(devmgr),
 	)
+
+	// Route MQTT request to API server
+	broker, err := mqtt.NewBroker(api.Mux)
+	if err != nil {
+		return err
+	}
+	defer broker.Close()
 
 	// The serve API routine never exists unless an error occurs
 	// we need to start it as a goroutine and wait on it so

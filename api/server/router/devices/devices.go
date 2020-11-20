@@ -25,6 +25,9 @@ func NewRouter(mgr *device.DeviceManager) router.Router {
 		router.NewGetRoute(devicePath, r.read),
 		router.NewPostRoute(devicePath, r.update),
 		router.NewDeleteRoute(devicePath, r.delete),
+
+		router.NewGetRoute("/me/attributes", r.read),
+		router.NewPostRoute("/me/attributes", r.update),
 	}
 	return r
 }
@@ -61,7 +64,7 @@ func (dr *devicesRouter) create(w http.ResponseWriter, r *http.Request, vars map
 	if err = dr.mgr.Create(id, token, req); err != nil {
 		return err
 	}
-	return httputils.WriteJSON(w, http.StatusOK, types.Token{token})
+	return httputils.WriteJSON(w, http.StatusOK, types.Token{Token: token})
 }
 
 func (dr *devicesRouter) read(w http.ResponseWriter, r *http.Request, vars map[string]string) error {

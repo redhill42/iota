@@ -2,6 +2,8 @@ package device
 
 import (
 	"github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go/request"
+	"net/http"
 )
 
 type DeviceManager struct {
@@ -32,10 +34,11 @@ func (mgr *DeviceManager) CreateToken(id string) (string, error) {
 	return token.SignedString(mgr.secret)
 }
 
-func (mgr *DeviceManager) VerifyToken(tokenString string) (string, error) {
+func (mgr *DeviceManager) Verify(r *http.Request) (string, error) {
 	var claims jwt.StandardClaims
 
-	_, err := jwt.ParseWithClaims(tokenString, &claims,
+	// Get token from request
+	_, err := request.ParseFromRequestWithClaims(r, request.AuthorizationHeaderExtractor, &claims,
 		func(token *jwt.Token) (interface{}, error) {
 			return mgr.secret, nil
 		})

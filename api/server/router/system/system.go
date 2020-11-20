@@ -56,5 +56,5 @@ func (s *systemRouter) postAuth(w http.ResponseWriter, r *http.Request, vars map
 		return nil
 	}
 
-	return httputils.WriteJSON(w, http.StatusOK, types.Token{token})
+	return httputils.WriteJSON(w, http.StatusOK, types.Token{Token: token})
 }
