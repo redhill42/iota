@@ -1,12 +1,14 @@
 package userdb
 
 import (
+	"errors"
 	"fmt"
-	"github.com/redhill42/iota/config"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/redhill42/iota/config"
 )
 
 // The Plugin interface represents a user database plugin. This interface
@@ -37,7 +39,18 @@ type Plugin interface {
 	Close() error
 }
 
-var NewPlugin = func() (Plugin, error) {
+// PluginFunc represents a plugin initialization function.
+type PluginFunc func(dburl string) (Plugin, error)
+
+var pluginRegistration = make(map[string]PluginFunc)
+
+// RegisterPlugin register a plugin under the given database scheme.
+func RegisterPlugin(scheme string, f PluginFunc) {
+	pluginRegistration[scheme] = f
+}
+
+// NewPlugin create a new plugin according to the configured user database URL.
+func NewPlugin() (Plugin, error) {
 	dbtype := config.Get("userdb.type")
 	dburl := config.Get("userdb.url")
 
@@ -50,7 +63,9 @@ var NewPlugin = func() (Plugin, error) {
 	}
 
 	if dbtype == "" {
-		return nil, fmt.Errorf("The user database plugin does not configured")
+		return nil, errors.New("The user database plugin does not configured")
+	} else if f, ok := pluginRegistration[dbtype]; ok {
+		return f(dburl)
 	} else {
 		return nil, fmt.Errorf("Unsupported user database scheme: %s", dbtype)
 	}

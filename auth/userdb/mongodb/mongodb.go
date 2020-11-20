@@ -1,16 +1,13 @@
 package mongodb
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/redhill42/iota/auth/userdb"
-	"github.com/redhill42/iota/config"
 )
 
 // User database backed by MongoDB database.
@@ -18,40 +15,28 @@ type mongodb struct {
 	session *mgo.Session
 }
 
-func init() {
-	prev := userdb.NewPlugin
-	userdb.NewPlugin = func() (userdb.Plugin, error) {
-		dbtype := config.Get("userdb.type")
-		dburl := config.Get("userdb.url")
-
-		if dbtype != "" && dbtype != "mongodb" {
-			return prev()
-		}
-		if dbtype == "" && !strings.HasPrefix(dburl, "mongodb://") {
-			return prev()
-		}
-		if dburl == "" {
-			return nil, errors.New("MongoDB URL not configured")
-		}
-
-		session, err := mgo.Dial(dburl)
-		if err != nil {
-			return nil, err
-		}
-
-		users := session.DB("").C("users")
-
-		err = users.EnsureIndex(mgo.Index{
-			Key:    []string{"name"},
-			Unique: true,
-		})
-		if err != nil {
-			session.Close()
-			return nil, err
-		}
-
-		return &mongodb{session}, nil
+func mongodbPlugin(dburl string) (userdb.Plugin, error) {
+	session, err := mgo.Dial(dburl)
+	if err != nil {
+		return nil, err
 	}
+
+	users := session.DB("").C("users")
+
+	err = users.EnsureIndex(mgo.Index{
+		Key:    []string{"name"},
+		Unique: true,
+	})
+	if err != nil {
+		session.Close()
+		return nil, err
+	}
+
+	return &mongodb{session}, nil
+}
+
+func init() {
+	userdb.RegisterPlugin("mongodb", mongodbPlugin)
 }
 
 func (db *mongodb) do(f func(c *mgo.Collection) error) error {

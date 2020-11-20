@@ -3,11 +3,12 @@ package file
 import (
 	"encoding/base64"
 	"errors"
-	"github.com/redhill42/iota/auth/userdb"
-	"github.com/redhill42/iota/config"
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/redhill42/iota/auth/userdb"
+	"github.com/redhill42/iota/config"
 )
 
 // User database backed by file.
@@ -15,39 +16,30 @@ type fileDB struct {
 	*config.Config
 }
 
-func init() {
-	prev := userdb.NewPlugin
-	userdb.NewPlugin = func() (userdb.Plugin, error) {
-		dbtype := config.Get("userdb.type")
-		dburl := config.Get("userdb.url")
-
-		if dbtype != "" && dbtype != "file" {
-			return prev()
-		}
-		if dbtype == "" && !strings.HasPrefix(dburl, "file://") {
-			return prev()
-		}
-
-		var filename string
-		if strings.HasPrefix(dburl, "file://") {
-			u, err := url.Parse(dburl)
-			if err != nil {
-				return nil, err
-			}
-			filename = u.Path
-		} else {
-			filename = dburl
-		}
-		if filename == "" {
-			return nil, errors.New("User database file not configured")
-		}
-
-		conf, err := config.Open(filename)
-		if err != nil && !os.IsNotExist(err) {
+func filePlugin(dburl string) (userdb.Plugin, error) {
+	var filename string
+	if strings.HasPrefix(dburl, "file://") {
+		u, err := url.Parse(dburl)
+		if err != nil {
 			return nil, err
 		}
-		return &fileDB{conf}, nil
+		filename = u.Path
+	} else {
+		filename = dburl
 	}
+	if filename == "" {
+		return nil, errors.New("User database file not configured")
+	}
+
+	conf, err := config.Open(filename)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	return &fileDB{conf}, nil
+}
+
+func init() {
+	userdb.RegisterPlugin("file", filePlugin)
 }
 
 func (db *fileDB) Create(user userdb.User) error {
