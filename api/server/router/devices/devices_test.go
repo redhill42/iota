@@ -69,7 +69,7 @@ var _ = Describe("DevicesRouter", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		srv := server.New("")
-		srv.InitRouter(devices.NewRouter(mgr))
+		srv.InitRouter(devices.NewRouter(mgr, nil))
 		mux = srv.Mux
 	})
 

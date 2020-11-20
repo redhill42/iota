@@ -40,7 +40,8 @@ var CommandUsage = []Command{
 	{"version", "Show the version information"},
 	{"device", "list devices or show device attributes"},
 	{"device:create", "Create device"},
-	{"device:delete", "permanently remove a device"},
+	{"device:delete", "Permanently remove a device"},
+	{"device:rpc", "Make a remote procedure call on a device"},
 }
 
 var Commands = make(map[string]Command)
@@ -66,6 +67,7 @@ func Init(host string, stdout, stderr io.Writer) *ClientCli {
 		"device":        c.CmdDevice,
 		"device:create": c.CmdDeviceCreate,
 		"device:delete": c.CmdDeviceDelete,
+		"device:rpc":    c.CmdDeviceRPC,
 	}
 
 	return c

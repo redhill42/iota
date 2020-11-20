@@ -1,9 +1,11 @@
 package devices
 
 import (
+	"bytes"
 	"errors"
 	"net/http"
 
+	"github.com/redhill42/iota/api/mqtt"
 	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/api/server/router"
 	"github.com/redhill42/iota/api/types"
@@ -14,17 +16,19 @@ const devicePath = "/devices/{id:[^/]+}"
 
 type devicesRouter struct {
 	mgr    *device.DeviceManager
+	broker *mqtt.Broker
 	routes []router.Route
 }
 
-func NewRouter(mgr *device.DeviceManager) router.Router {
-	r := &devicesRouter{mgr: mgr}
+func NewRouter(mgr *device.DeviceManager, broker *mqtt.Broker) router.Router {
+	r := &devicesRouter{mgr: mgr, broker: broker}
 	r.routes = []router.Route{
 		router.NewGetRoute("/devices/", r.list),
 		router.NewPostRoute("/devices/", r.create),
 		router.NewGetRoute(devicePath, r.read),
 		router.NewPostRoute(devicePath, r.update),
 		router.NewDeleteRoute(devicePath, r.delete),
+		router.NewPostRoute(devicePath+"/rpc", r.rpc),
 
 		router.NewGetRoute("/me/attributes", r.read),
 		router.NewPostRoute("/me/attributes", r.update),
@@ -98,4 +102,22 @@ func (dr *devicesRouter) delete(w http.ResponseWriter, r *http.Request, vars map
 		w.WriteHeader(http.StatusNoContent)
 		return nil
 	}
+}
+
+func (dr *devicesRouter) rpc(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	body := bytes.NewBuffer(nil)
+	_, err := body.ReadFrom(r.Body)
+	if err != nil {
+		return err
+	}
+
+	token, err := dr.mgr.GetToken(vars["id"])
+	if err != nil {
+		return err
+	}
+
+	topic := token + "/me/rpc/request/" + r.FormValue("requestId")
+	dr.broker.Publish(topic, body.Bytes())
+	w.WriteHeader(http.StatusNoContent)
+	return nil
 }

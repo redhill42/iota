@@ -17,6 +17,7 @@ Additional commands, type iotacli help COMMAND for more details:
 
   device:create      Create a new device
   device:remove      Permanently remove a device
+  device:rpc         Make a remote procedure call on a device
 `
 
 func (cli *ClientCli) CmdDevice(args ...string) error {
@@ -84,7 +85,7 @@ func (cli *ClientCli) CmdDeviceCreate(args ...string) error {
 func (cli *ClientCli) CmdDeviceDelete(args ...string) error {
 	var yes bool
 
-	cmd := cli.Subcmd("app:delete", "ID")
+	cmd := cli.Subcmd("device:delete", "ID")
 	cmd.Require(mflag.Exact, 1)
 	cmd.BoolVar(&yes, []string{"y"}, false, "Confirm 'yes' to remove the application")
 	cmd.ParseFlags(args, true)
@@ -96,4 +97,24 @@ func (cli *ClientCli) CmdDeviceDelete(args ...string) error {
 		return err
 	}
 	return cli.DeleteDevice(context.Background(), cmd.Arg(0))
+}
+
+func (cli *ClientCli) CmdDeviceRPC(args ...string) error {
+	var requestId string
+
+	cmd := cli.Subcmd("device:rpc", "[OPTIONS] ID REQUEST")
+	cmd.Require(mflag.Exact, 2)
+	cmd.StringVar(&requestId, []string{"i"}, "", "Request identifier")
+	cmd.ParseFlags(args, true)
+
+	id := cmd.Arg(0)
+	req := make(map[string]interface{})
+
+	if err := cli.ConnectAndLogin(); err != nil {
+		return err
+	}
+	if err := json.Unmarshal([]byte(cmd.Arg(1)), &req); err != nil {
+		return err
+	}
+	return cli.RPC(context.Background(), id, requestId, req)
 }

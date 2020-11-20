@@ -3,6 +3,8 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"net/url"
+
 	"github.com/redhill42/iota/api/types"
 )
 
@@ -44,6 +46,13 @@ func (api *APIClient) UpdateDevice(ctx context.Context, id string, updates inter
 
 func (api *APIClient) DeleteDevice(ctx context.Context, id string) error {
 	resp, err := api.Delete(ctx, "/devices/"+id, nil, nil)
+	resp.EnsureClosed()
+	return err
+}
+
+func (api *APIClient) RPC(ctx context.Context, id, requestId string, request interface{}) error {
+	query := url.Values{"requestId": []string{requestId}}
+	resp, err := api.Post(ctx, "/devices/"+id+"/rpc", query, request, nil)
 	resp.EnsureClosed()
 	return err
 }

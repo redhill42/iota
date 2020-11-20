@@ -52,7 +52,7 @@ func NewAPIServer() (api *APIServer, err error) {
 	// Initialize routers
 	api.InitRouter(
 		system.NewRouter(api.authz),
-		devices.NewRouter(api.devmgr),
+		devices.NewRouter(api.devmgr, api.broker),
 	)
 
 	// Route MQTT request to API server.

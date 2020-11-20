@@ -11,6 +11,7 @@ import (
 
 type deviceDB struct {
 	session *mgo.Session
+	cache   map[string]string
 }
 
 func openDatabase() (*deviceDB, error) {
@@ -23,7 +24,7 @@ func openDatabase() (*deviceDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &deviceDB{session}, nil
+	return &deviceDB{session, make(map[string]string)}, nil
 }
 
 func (db *deviceDB) do(f func(c *mgo.Collection) error) error {
@@ -81,6 +82,20 @@ func (db *deviceDB) FindAll() ([]string, error) {
 	return result, err
 }
 
+func (db *deviceDB) GetToken(id string) (string, error) {
+	token, prs := db.cache[id]
+	if !prs {
+		info := make(map[string]interface{})
+		err := db.Find(id, info)
+		if err != nil {
+			return "", err
+		}
+		token = info["token"].(string)
+		db.cache[id] = token
+	}
+	return token, nil
+}
+
 func (db *deviceDB) Update(id string, fields map[string]interface{}) error {
 	return db.do(func(c *mgo.Collection) error {
 		delete(fields, "_id")
@@ -99,6 +114,7 @@ func (db *deviceDB) Update(id string, fields map[string]interface{}) error {
 
 func (db *deviceDB) Remove(id string) error {
 	return db.do(func(c *mgo.Collection) error {
+		delete(db.cache, id)
 		err := c.RemoveId(id)
 		if err == mgo.ErrNotFound {
 			err = DeviceNotFoundError(id)
