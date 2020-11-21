@@ -10,7 +10,7 @@ import (
 
 func (api *APIClient) GetDevices(ctx context.Context) ([]string, error) {
 	var devices []string
-	resp, err := api.Get(ctx, "/devices/", nil, nil)
+	resp, err := api.Get(ctx, "/devices", nil, nil)
 	if err == nil {
 		err = json.NewDecoder(resp.Body).Decode(&devices)
 		resp.EnsureClosed()
@@ -30,7 +30,7 @@ func (api *APIClient) GetDevice(ctx context.Context, id string, info interface{}
 func (api *APIClient) CreateDevice(ctx context.Context, attributes interface{}) (token string, err error) {
 	var v types.Token
 
-	resp, err := api.Post(ctx, "/devices/", nil, attributes, nil)
+	resp, err := api.Post(ctx, "/devices", nil, attributes, nil)
 	if err == nil {
 		err = json.NewDecoder(resp.Body).Decode(&v)
 		resp.EnsureClosed()
@@ -39,7 +39,7 @@ func (api *APIClient) CreateDevice(ctx context.Context, attributes interface{}) 
 }
 
 func (api *APIClient) UpdateDevice(ctx context.Context, id string, updates interface{}) error {
-	resp, err := api.Post(ctx, "/devices/"+id, nil, updates, nil)
+	resp, err := api.Put(ctx, "/devices/"+id, nil, updates, nil)
 	resp.EnsureClosed()
 	return err
 }

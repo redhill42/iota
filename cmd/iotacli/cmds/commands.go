@@ -66,6 +66,7 @@ func Init(host string, stdout, stderr io.Writer) *ClientCli {
 		"version":       c.CmdVersion,
 		"device":        c.CmdDevice,
 		"device:create": c.CmdDeviceCreate,
+		"device:update": c.CmdDeviceUpdate,
 		"device:delete": c.CmdDeviceDelete,
 		"device:rpc":    c.CmdDeviceRPC,
 	}

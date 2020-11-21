@@ -23,10 +23,10 @@ type devicesRouter struct {
 func NewRouter(mgr *device.DeviceManager, broker *mqtt.Broker) router.Router {
 	r := &devicesRouter{mgr: mgr, broker: broker}
 	r.routes = []router.Route{
-		router.NewGetRoute("/devices/", r.list),
-		router.NewPostRoute("/devices/", r.create),
+		router.NewGetRoute("/devices", r.list),
+		router.NewPostRoute("/devices", r.create),
 		router.NewGetRoute(devicePath, r.read),
-		router.NewPostRoute(devicePath, r.update),
+		router.NewPutRoute(devicePath, r.update),
 		router.NewDeleteRoute(devicePath, r.delete),
 		router.NewPostRoute(devicePath+"/rpc", r.rpc),
 
@@ -68,7 +68,8 @@ func (dr *devicesRouter) create(w http.ResponseWriter, r *http.Request, vars map
 	if err = dr.mgr.Create(id, token, req); err != nil {
 		return err
 	}
-	return httputils.WriteJSON(w, http.StatusOK, types.Token{Token: token})
+	w.Header().Set("Location", r.RequestURI+"/"+id)
+	return httputils.WriteJSON(w, http.StatusCreated, types.Token{Token: token})
 }
 
 func (dr *devicesRouter) read(w http.ResponseWriter, r *http.Request, vars map[string]string) error {

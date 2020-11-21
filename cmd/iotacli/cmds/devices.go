@@ -16,6 +16,7 @@ list devices or show device attributes (if an ID is provided).
 Additional commands, type iotacli help COMMAND for more details:
 
   device:create      Create a new device
+  device:update      Update a device's attributes
   device:remove      Permanently remove a device
   device:rpc         Make a remote procedure call on a device
 `
@@ -80,6 +81,23 @@ func (cli *ClientCli) CmdDeviceCreate(args ...string) error {
 		fmt.Fprintln(cli.stdout, token)
 	}
 	return err
+}
+
+func (cli *ClientCli) CmdDeviceUpdate(args ...string) error {
+	cmd := cli.Subcmd("device:update", "ID ATTRIBUTES")
+	cmd.Require(mflag.Exact, 2)
+	cmd.ParseFlags(args, true)
+
+	id := cmd.Arg(0)
+	attributes := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(cmd.Arg(1)), &attributes); err != nil {
+		return err
+	}
+
+	if err := cli.ConnectAndLogin(); err != nil {
+		return err
+	}
+	return cli.UpdateDevice(context.Background(), id, attributes)
 }
 
 func (cli *ClientCli) CmdDeviceDelete(args ...string) error {

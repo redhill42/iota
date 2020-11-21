@@ -47,7 +47,7 @@ func (w *fakeWriter) WriteHeader(statusCode int) {
 
 func (w *fakeWriter) Err(id string) error {
 	switch w.statusCode {
-	case http.StatusOK, http.StatusNoContent:
+	case http.StatusOK, http.StatusNoContent, http.StatusCreated:
 		return nil
 	case http.StatusNotFound:
 		return device.DeviceNotFoundError(id)
@@ -117,7 +117,7 @@ var _ = Describe("DevicesRouter", func() {
 		}
 
 		var res types.Token
-		err := makeRequest("POST", "/devices/", id, req, &res)
+		err := makeRequest("POST", "/devices", id, req, &res)
 		return res.Token, err
 	}
 
@@ -127,7 +127,7 @@ var _ = Describe("DevicesRouter", func() {
 	}
 
 	updateDevice := func(id string, updates map[string]interface{}) error {
-		return makeRequest("POST", "/devices/"+id, id, updates, nil)
+		return makeRequest("PUT", "/devices/"+id, id, updates, nil)
 	}
 
 	deleteDevice := func(id string) error {
