@@ -8,10 +8,6 @@ import (
 	"github.com/redhill42/iota/config"
 	"github.com/redhill42/iota/pkg/mflag"
 	"github.com/sirupsen/logrus"
-
-	// Load all user database plugins
-	_ "github.com/redhill42/iota/auth/userdb/file"
-	_ "github.com/redhill42/iota/auth/userdb/mongodb"
 )
 
 func main() {

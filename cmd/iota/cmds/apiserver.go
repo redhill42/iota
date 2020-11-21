@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"syscall"
 
+	"github.com/redhill42/iota/agent"
 	"github.com/redhill42/iota/api/server"
 	"github.com/sirupsen/logrus"
 )
@@ -22,11 +23,16 @@ func (cli *ServerCli) CmdAPIServer(args ...string) (err error) {
 	stopc := make(chan bool)
 	defer close(stopc)
 
-	api, err := server.NewAPIServer()
+	agent, err := agent.New()
 	if err != nil {
 		return err
 	}
-	defer api.Cleanup()
+	defer agent.Close()
+
+	api, err := server.NewAPIServer(agent)
+	if err != nil {
+		return err
+	}
 
 	l, err := net.Listen("tcp", addr)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/gorilla/mux"
+	"github.com/redhill42/iota/agent"
 	"github.com/redhill42/iota/api/server"
 	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/api/server/router/devices"
@@ -65,11 +66,15 @@ var _ = Describe("DevicesRouter", func() {
 	BeforeEach(func() {
 		var err error
 
-		mgr, err = device.NewDeviceManager()
+		mgr, err = device.NewDeviceManager(nil)
 		Expect(err).NotTo(HaveOccurred())
 
+		// Create fake agent that only support device manager
+		agent := new(agent.Agent)
+		agent.DeviceManager = mgr
+
 		srv := server.New("")
-		srv.InitRouter(devices.NewRouter(mgr, nil, nil))
+		srv.InitRouter(devices.NewRouter(agent))
 		mux = srv.Mux
 	})
 

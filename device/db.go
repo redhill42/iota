@@ -5,13 +5,14 @@ import (
 	"errors"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"sync"
 
 	"github.com/redhill42/iota/config"
 )
 
 type deviceDB struct {
 	session *mgo.Session
-	cache   map[string]string
+	cache   sync.Map
 }
 
 func openDatabase() (*deviceDB, error) {
@@ -24,7 +25,7 @@ func openDatabase() (*deviceDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &deviceDB{session, make(map[string]string)}, nil
+	return &deviceDB{session: session}, nil
 }
 
 func (db *deviceDB) do(f func(c *mgo.Collection) error) error {
@@ -55,14 +56,16 @@ func (db *deviceDB) Find(id string, result map[string]interface{}) error {
 		if err == mgo.ErrNotFound {
 			err = DeviceNotFoundError(id)
 		}
+		if err != nil {
+			return err
+		}
 
 		token := result["_token"]
 		delete(result, "_id")
 		delete(result, "_token")
 		result["id"] = id
 		result["token"] = token
-
-		return err
+		return nil
 	})
 }
 
@@ -83,17 +86,24 @@ func (db *deviceDB) FindAll() ([]string, error) {
 }
 
 func (db *deviceDB) GetToken(id string) (string, error) {
-	token, prs := db.cache[id]
-	if !prs {
-		info := make(map[string]interface{})
-		err := db.Find(id, info)
-		if err != nil {
-			return "", err
-		}
-		token = info["token"].(string)
-		db.cache[id] = token
+	if token, ok := db.cache.Load(id); ok {
+		return token.(string), nil
 	}
-	return token, nil
+
+	var v struct {
+		Token string `bson:"_token"`
+	}
+	err := db.do(func(c *mgo.Collection) error {
+		err := c.FindId(id).Select(bson.M{"_token": 1}).One(&v)
+		if err == mgo.ErrNotFound {
+			err = DeviceNotFoundError(id)
+		}
+		return err
+	})
+	if err == nil {
+		db.cache.Store(id, v.Token)
+	}
+	return v.Token, err
 }
 
 func (db *deviceDB) Update(id string, fields map[string]interface{}) error {
@@ -114,7 +124,7 @@ func (db *deviceDB) Update(id string, fields map[string]interface{}) error {
 
 func (db *deviceDB) Remove(id string) error {
 	return db.do(func(c *mgo.Collection) error {
-		delete(db.cache, id)
+		db.cache.Delete(id)
 		err := c.RemoveId(id)
 		if err == mgo.ErrNotFound {
 			err = DeviceNotFoundError(id)

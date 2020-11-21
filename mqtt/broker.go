@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/gorilla/mux"
 	"github.com/redhill42/iota/config"
 	"github.com/sirupsen/logrus"
@@ -16,7 +16,7 @@ import (
 
 type Broker struct {
 	client mqtt.Client
-	Mux    *mux.Router
+	mux    *mux.Router
 	qos    byte
 	pubQ   chan mqtt.Token
 }
@@ -26,39 +26,12 @@ func NewBroker() (*Broker, error) {
 	opts := broker.configure()
 
 	broker.client = mqtt.NewClient(opts)
-	if token := broker.client.Connect(); token.Wait() && token.Error() != nil {
-		return nil, token.Error()
-	}
-
-	// Subscribe mqtt topic and forward to API server. The topic has the
-	// following pattern:
-	//
-	//    api / <ver> / <token> / <path> [ /request/$request_id ]
-	//            ^        ^        ^
-	//            |        |        |-- path of request uri
-	//            |        |-- device access token
-	//            |-- API version number, v1, v2, etc
-	//
-	// for example, the MQTT topic "api/v1/XXX/me/attributes" will
-	// forwarded to API server with URL "/api/v1/me/attributes".
-	//
-	// If the path ends with "/request/$request_id", where $request_id is a request
-	// identifier allocated by client, then this is a GET request. Client must subscribe
-	// to a response topic to recieve response message. The response topic has the form
-	//    <token>/<path>/response/$request_id
-	// Note that the response topic doesn't contains "api/v1" prefix.
-	//
-	// for example, to get device attributes, device send an empty message to
-	// "api/v1/XXX/me/attributes/request/1" and subscribe to "XXX/me/attributes/response/1"
-	// to receive the result.
-
-	if token := broker.client.Subscribe("api/+/+/#", broker.qos, broker.serveMQTT); token.Wait() && token.Error() != nil {
-		return nil, token.Error()
+	if t := broker.client.Connect(); t.Wait() && t.Error() != nil {
+		return nil, t.Error()
 	}
 
 	broker.pubQ = make(chan mqtt.Token, 100)
 	go broker.drainPubQ()
-
 	return broker, nil
 }
 
@@ -97,9 +70,60 @@ func (broker *Broker) configure() *mqtt.ClientOptions {
 	return opts
 }
 
+func (broker *Broker) Publish(topic string, payload interface{}) {
+	broker.pubQ <- broker.client.Publish(topic, broker.qos, false, payload)
+}
+
+func (broker *Broker) drainPubQ() {
+	for {
+		t, more := <-broker.pubQ
+		if !more || t == nil {
+			break
+		}
+		_ = t.Wait()
+		if t.Error() != nil {
+			logrus.WithError(t.Error()).Error("Failed to publish message")
+		}
+	}
+}
+
 func (broker *Broker) Close() {
 	broker.pubQ <- nil
 	broker.client.Disconnect(250)
+}
+
+// Subscribe mqtt topic and forward to API server. The topic has the
+// following pattern:
+//
+//    api / <ver> / <token> / <path> [ /request/$request_id ]
+//            ^        ^        ^
+//            |        |        |-- path of request uri
+//            |        |-- device access token
+//            |-- API version number, v1, v2, etc
+//
+// for example, the MQTT topic "api/v1/XXX/me/attributes" will
+// forwarded to API server with URL "/api/v1/me/attributes".
+//
+// If the path ends with "/request/$request_id", where $request_id is a request
+// identifier allocated by client, then this is a GET request. Client must subscribe
+// to a response topic to recieve response message. The response topic has the form
+//    <token>/<path>/response/$request_id
+// Note that the response topic doesn't contains "api/v1" prefix.
+//
+// for example, to get device attributes, device send an empty message to
+// "api/v1/XXX/me/attributes/request/1" and subscribe to "XXX/me/attributes/response/1"
+// to receive the result.
+func (broker *Broker) Forward(mux *mux.Router) error {
+	if broker.mux != nil {
+		panic("MQTT broker already forwarded")
+	}
+	broker.mux = mux
+	if t := broker.client.Subscribe("api/+/+/#", broker.qos, broker.serveMQTT); t.Wait() && t.Error() != nil {
+		broker.mux = nil
+		return t.Error()
+	} else {
+		return nil
+	}
 }
 
 type fakeWriter struct {
@@ -159,28 +183,11 @@ func (broker *Broker) serveMQTT(client mqtt.Client, msg mqtt.Message) {
 
 	// Route to API server
 	w := fakeWriter{}
-	broker.Mux.ServeHTTP(&w, r)
+	broker.mux.ServeHTTP(&w, r)
 
 	// Send response message
 	if method == "GET" {
 		responseTopic := token + "/" + path + "/response/" + requestId
 		broker.Publish(responseTopic, w.body.Bytes())
-	}
-}
-
-func (broker *Broker) Publish(topic string, payload interface{}) {
-	broker.pubQ <- broker.client.Publish(topic, broker.qos, false, payload)
-}
-
-func (broker *Broker) drainPubQ() {
-	for {
-		t, more := <-broker.pubQ
-		if !more || t == nil {
-			break
-		}
-		_ = t.Wait()
-		if t.Error() != nil {
-			logrus.WithError(t.Error()).Error("Failed to publish message")
-		}
 	}
 }

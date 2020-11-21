@@ -1,23 +1,24 @@
 package system
 
 import (
+	"net/http"
+	"runtime"
+
+	"github.com/redhill42/iota/agent"
 	"github.com/redhill42/iota/api"
 	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/api/server/router"
 	"github.com/redhill42/iota/api/types"
-	"github.com/redhill42/iota/auth"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"runtime"
 )
 
 type systemRouter struct {
-	authz  *auth.Authenticator
+	*agent.Agent
 	routes []router.Route
 }
 
-func NewRouter(authz *auth.Authenticator) router.Router {
-	r := &systemRouter{authz: authz}
+func NewRouter(agent *agent.Agent) router.Router {
+	r := &systemRouter{Agent: agent}
 	r.routes = []router.Route{
 		router.NewGetRoute("/version", r.getVersion),
 		router.NewGetRoute("/swagger.json", r.getSwaggerJson),
@@ -49,7 +50,7 @@ func (s *systemRouter) postAuth(w http.ResponseWriter, r *http.Request, vars map
 		return nil
 	}
 
-	_, token, err := s.authz.Authenticate(username, password)
+	_, token, err := s.Authz.Authenticate(username, password)
 	if err != nil {
 		logrus.WithField("username", username).WithError(err).Debug("Login failed")
 		http.Error(w, "Login failed", http.StatusUnauthorized)

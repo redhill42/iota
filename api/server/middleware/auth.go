@@ -5,23 +5,20 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/redhill42/iota/agent"
 	"github.com/redhill42/iota/api/server/httputils"
-	"github.com/redhill42/iota/auth"
-	"github.com/redhill42/iota/device"
 	"github.com/sirupsen/logrus"
 )
 
 type authMiddleware struct {
-	authz             *auth.Authenticator
-	devmgr            *device.DeviceManager
+	*agent.Agent
 	noAuthPattern     *regexp.Regexp
 	deviceAuthPattern *regexp.Regexp
 }
 
-func NewAuthMiddleware(authz *auth.Authenticator, devmgr *device.DeviceManager, contextRoot string) authMiddleware {
+func NewAuthMiddleware(agent *agent.Agent, contextRoot string) authMiddleware {
 	return authMiddleware{
-		authz,
-		devmgr,
+		agent,
 		regexp.MustCompile("^" + contextRoot + "(/v[0-9.]+)?/(version|auth|swagger.json)"),
 		regexp.MustCompile("^" + contextRoot + "(/v[0-9.]+)?/me"),
 	}
@@ -34,7 +31,7 @@ func (m authMiddleware) WrapHandler(handler httputils.APIFunc) httputils.APIFunc
 		}
 
 		if m.deviceAuthPattern.MatchString(r.URL.Path) {
-			deviceId, err := m.devmgr.Verify(r)
+			deviceId, err := m.DeviceManager.Verify(r)
 			if err != nil {
 				w.WriteHeader(http.StatusUnauthorized)
 				return nil
@@ -43,7 +40,7 @@ func (m authMiddleware) WrapHandler(handler httputils.APIFunc) httputils.APIFunc
 			vars["id"] = deviceId
 			return handler(w, r, vars)
 		} else {
-			user, err := m.authz.Verify(r)
+			user, err := m.Authz.Verify(r)
 			if err != nil {
 				w.WriteHeader(http.StatusUnauthorized)
 				return nil
