@@ -1,15 +1,17 @@
 package devices
 
 import (
-	"bytes"
 	"errors"
+	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/redhill42/iota/api/mqtt"
 	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/api/server/router"
 	"github.com/redhill42/iota/api/types"
 	"github.com/redhill42/iota/device"
+	"github.com/redhill42/iota/tsdb"
 )
 
 const devicePath = "/devices/{id:[^/]+}"
@@ -17,11 +19,12 @@ const devicePath = "/devices/{id:[^/]+}"
 type devicesRouter struct {
 	mgr    *device.DeviceManager
 	broker *mqtt.Broker
+	tsdb   tsdb.TSDB
 	routes []router.Route
 }
 
-func NewRouter(mgr *device.DeviceManager, broker *mqtt.Broker) router.Router {
-	r := &devicesRouter{mgr: mgr, broker: broker}
+func NewRouter(mgr *device.DeviceManager, broker *mqtt.Broker, tsdb tsdb.TSDB) router.Router {
+	r := &devicesRouter{mgr: mgr, broker: broker, tsdb: tsdb}
 	r.routes = []router.Route{
 		router.NewGetRoute("/devices", r.list),
 		router.NewPostRoute("/devices", r.create),
@@ -32,6 +35,7 @@ func NewRouter(mgr *device.DeviceManager, broker *mqtt.Broker) router.Router {
 
 		router.NewGetRoute("/me/attributes", r.read),
 		router.NewPostRoute("/me/attributes", r.update),
+		router.NewPostRoute("/me/measurement", r.measurement),
 	}
 	return r
 }
@@ -106,8 +110,7 @@ func (dr *devicesRouter) delete(w http.ResponseWriter, r *http.Request, vars map
 }
 
 func (dr *devicesRouter) rpc(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	body := bytes.NewBuffer(nil)
-	_, err := body.ReadFrom(r.Body)
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return err
 	}
@@ -118,7 +121,23 @@ func (dr *devicesRouter) rpc(w http.ResponseWriter, r *http.Request, vars map[st
 	}
 
 	topic := token + "/me/rpc/request/" + r.FormValue("requestId")
-	dr.broker.Publish(topic, body.Bytes())
+	dr.broker.Publish(topic, body)
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func (dr *devicesRouter) measurement(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+
+	// Add device name tag
+	record := strings.Split(string(body), " ")
+	record[0] += ",device=" + vars["id"]
+
+	// Write record to time series database
+	dr.tsdb.WriteRecord(strings.Join(record, " "))
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

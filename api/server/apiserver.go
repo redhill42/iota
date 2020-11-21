@@ -8,6 +8,7 @@ import (
 	"github.com/redhill42/iota/auth"
 	"github.com/redhill42/iota/auth/userdb"
 	"github.com/redhill42/iota/device"
+	"github.com/redhill42/iota/tsdb"
 )
 
 const _CONTEXT_ROOT = "/api"
@@ -20,6 +21,7 @@ type APIServer struct {
 	authz  *auth.Authenticator
 	devmgr *device.DeviceManager
 	broker *mqtt.Broker
+	tsdb   tsdb.TSDB
 }
 
 func NewAPIServer() (api *APIServer, err error) {
@@ -45,6 +47,11 @@ func NewAPIServer() (api *APIServer, err error) {
 		return nil, err
 	}
 
+	api.tsdb, err = tsdb.New()
+	if err != nil {
+		return nil, err
+	}
+
 	// Initialize middlewares
 	api.UseMiddleware(middleware.NewVersionMiddleware())
 	api.UseMiddleware(middleware.NewAuthMiddleware(api.authz, api.devmgr, _CONTEXT_ROOT))
@@ -52,7 +59,7 @@ func NewAPIServer() (api *APIServer, err error) {
 	// Initialize routers
 	api.InitRouter(
 		system.NewRouter(api.authz),
-		devices.NewRouter(api.devmgr, api.broker),
+		devices.NewRouter(api.devmgr, api.broker, api.tsdb),
 	)
 
 	// Route MQTT request to API server.
@@ -65,4 +72,5 @@ func (api *APIServer) Cleanup() {
 	api.users.Close()
 	api.devmgr.Close()
 	api.broker.Close()
+	api.tsdb.Close()
 }

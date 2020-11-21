@@ -23,12 +23,14 @@ Additional commands, type iotacli help COMMAND for more details:
 
 func (cli *ClientCli) CmdDevice(args ...string) error {
 	var help bool
+	var tokenOnly bool
 	var err error
 
-	cmd := cli.Subcmd("device", "[ID]")
+	cmd := cli.Subcmd("device", "[-t ID]")
 	cmd.Require(mflag.Min, 0)
 	cmd.Require(mflag.Max, 1)
 	cmd.BoolVar(&help, []string{"-help"}, false, "Print usage")
+	cmd.BoolVar(&tokenOnly, []string{"t"}, false, "Show device token only")
 	cmd.ParseFlags(args, false)
 
 	if help {
@@ -50,7 +52,11 @@ func (cli *ClientCli) CmdDevice(args ...string) error {
 		id := cmd.Arg(0)
 		info := make(map[string]interface{})
 		if err = cli.GetDevice(context.Background(), id, &info); err == nil {
-			cli.writeJson(info)
+			if tokenOnly {
+				fmt.Fprintln(cli.stdout, info["token"])
+			} else {
+				cli.writeJson(info)
+			}
 		}
 	}
 	return err
