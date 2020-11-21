@@ -18,8 +18,13 @@ func (api *APIClient) GetDevices(ctx context.Context) ([]string, error) {
 	return devices, err
 }
 
-func (api *APIClient) GetDevice(ctx context.Context, id string, info interface{}) error {
-	resp, err := api.Get(ctx, "/devices/"+id, nil, nil)
+func (api *APIClient) GetDevice(ctx context.Context, id, keys string, info interface{}) error {
+	var query url.Values
+	if keys != "" {
+		query = url.Values{"keys": []string{keys}}
+	}
+
+	resp, err := api.Get(ctx, "/devices/"+id, query, nil)
 	if err == nil {
 		err = json.NewDecoder(resp.Body).Decode(info)
 		resp.EnsureClosed()

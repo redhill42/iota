@@ -81,6 +81,18 @@ func (dr *devicesRouter) read(w http.ResponseWriter, r *http.Request, vars map[s
 	if err := dr.mgr.Find(vars["id"], info); err != nil {
 		return err
 	}
+
+	keys := r.FormValue("keys")
+	if keys != "" {
+		filteredInfo := make(map[string]interface{})
+		for _, key := range strings.Split(keys, ",") {
+			if val, ok := info[key]; ok {
+				filteredInfo[key] = val
+			}
+		}
+		info = filteredInfo
+	}
+
 	return httputils.WriteJSON(w, http.StatusOK, &info)
 }
 
