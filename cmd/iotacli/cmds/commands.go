@@ -42,6 +42,9 @@ var CommandUsage = []Command{
 	{"device:create", "Create device"},
 	{"device:delete", "Permanently remove a device"},
 	{"device:rpc", "Make a remote procedure call on a device"},
+	{"device:claims", "Show current device claims"},
+	{"device:approve", "Approve a device claim"},
+	{"device:reject", "Reject a device claim"},
 }
 
 var Commands = make(map[string]Command)
@@ -61,14 +64,17 @@ func Init(host string, stdout, stderr io.Writer) *ClientCli {
 	c.stderr = stderr
 
 	c.handlers = map[string]func(...string) error{
-		"login":         c.CmdLogin,
-		"logout":        c.CmdLogout,
-		"version":       c.CmdVersion,
-		"device":        c.CmdDevice,
-		"device:create": c.CmdDeviceCreate,
-		"device:update": c.CmdDeviceUpdate,
-		"device:delete": c.CmdDeviceDelete,
-		"device:rpc":    c.CmdDeviceRPC,
+		"login":          c.CmdLogin,
+		"logout":         c.CmdLogout,
+		"version":        c.CmdVersion,
+		"device":         c.CmdDevice,
+		"device:create":  c.CmdDeviceCreate,
+		"device:update":  c.CmdDeviceUpdate,
+		"device:delete":  c.CmdDeviceDelete,
+		"device:rpc":     c.CmdDeviceRPC,
+		"device:claims":  c.CmdDeviceClaims,
+		"device:approve": c.CmdDeviceApprove,
+		"device:reject":  c.CmdDeviceReject,
 	}
 
 	return c

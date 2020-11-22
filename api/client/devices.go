@@ -61,3 +61,30 @@ func (api *APIClient) RPC(ctx context.Context, id, requestId string, request int
 	resp.EnsureClosed()
 	return err
 }
+
+func (api *APIClient) GetClaims(ctx context.Context) ([]map[string]interface{}, error) {
+	var claims []map[string]interface{}
+	resp, err := api.Get(ctx, "/claims", nil, nil)
+	if err == nil {
+		err = json.NewDecoder(resp.Body).Decode(&claims)
+		resp.EnsureClosed()
+	}
+	return claims, err
+}
+
+func (api *APIClient) ApproveDevice(ctx context.Context, claimId string, updates map[string]interface{}) (string, error) {
+	var v types.Token
+
+	resp, err := api.Post(ctx, "/claims/"+claimId+"/approve", nil, updates, nil)
+	if err == nil {
+		err = json.NewDecoder(resp.Body).Decode(&v)
+		resp.EnsureClosed()
+	}
+	return v.Token, err
+}
+
+func (api *APIClient) RejectDevice(ctx context.Context, claimId string) error {
+	resp, err := api.Post(ctx, "/claims/"+claimId+"/reject", nil, nil, nil)
+	resp.EnsureClosed()
+	return err
+}

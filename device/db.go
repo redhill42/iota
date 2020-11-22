@@ -122,6 +122,18 @@ func (db *deviceDB) Update(id string, fields map[string]interface{}) error {
 	})
 }
 
+func (db *deviceDB) Upsert(id, token string, fields map[string]interface{}) error {
+	return db.do(func(c *mgo.Collection) error {
+		delete(fields, "id")
+		delete(fields, "_id")
+		delete(fields, "token")
+		fields["_token"] = token
+
+		_, err := c.UpsertId(id, bson.M{"$set": fields})
+		return err
+	})
+}
+
 func (db *deviceDB) Remove(id string) error {
 	return db.do(func(c *mgo.Collection) error {
 		db.cache.Delete(id)

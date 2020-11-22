@@ -14,6 +14,7 @@ import (
 )
 
 const devicePath = "/devices/{id:[^/]+}"
+const claimPath = "/claims/{id:[^/]+}"
 
 type devicesRouter struct {
 	*agent.Agent
@@ -30,6 +31,11 @@ func NewRouter(agent *agent.Agent) router.Router {
 		router.NewDeleteRoute(devicePath, r.delete),
 		router.NewPostRoute(devicePath+"/rpc", r.rpc),
 
+		router.NewGetRoute("/claims", r.getClaims),
+		router.NewPostRoute(claimPath+"/approve", r.approve),
+		router.NewPostRoute(claimPath+"/reject", r.reject),
+
+		router.NewPostRoute("/me/claim", r.claim),
 		router.NewGetRoute("/me/attributes", r.read),
 		router.NewPostRoute("/me/attributes", r.update),
 		router.NewPostRoute("/me/measurement", r.measurement),
@@ -64,7 +70,7 @@ func (dr *devicesRouter) create(w http.ResponseWriter, r *http.Request, vars map
 		return httputils.NewStatusError(http.StatusBadRequest, errors.New("Missing \"id\" attribute"))
 	}
 	if !validateDeviceId(id) {
-		return httputils.NewStatusError(http.StatusBadRequest, errors.New("Invalidate device id"))
+		return httputils.NewStatusError(http.StatusBadRequest, errors.New("Invalid device id"))
 	}
 	if token, err = dr.DeviceManager.CreateToken(id); err != nil {
 		return err
@@ -156,4 +162,57 @@ func (dr *devicesRouter) measurement(w http.ResponseWriter, r *http.Request, var
 	dr.TSDB.WriteRecord(strings.Join(record, " "))
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+func (dr *devicesRouter) claim(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	var (
+		req map[string]interface{}
+		id  string
+		ok  bool
+		err error
+	)
+
+	if err = httputils.ReadJSON(r, &req); err != nil {
+		return err
+	}
+	if id, ok = req["claim-id"].(string); !ok {
+		return httputils.NewStatusError(http.StatusBadRequest, errors.New("Missing \"claim-id\" attribute"))
+	}
+	if !validateDeviceId(id) {
+		return httputils.NewStatusError(http.StatusBadRequest, errors.New("Invalid device id"))
+	}
+	if err = dr.DeviceManager.Claim(id, req); err != nil {
+		return err
+	} else {
+		w.WriteHeader(http.StatusAccepted)
+		return nil
+	}
+}
+
+func (dr *devicesRouter) getClaims(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	claims := dr.DeviceManager.GetClaims()
+	return httputils.WriteJSON(w, http.StatusOK, claims)
+}
+
+func (dr *devicesRouter) approve(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	var updates map[string]interface{}
+	var id = vars["id"]
+
+	if err := httputils.ReadJSON(r, &updates); err != nil {
+		return err
+	}
+	if token, err := dr.DeviceManager.Approve(id, updates); err != nil {
+		return err
+	} else {
+		return httputils.WriteJSON(w, http.StatusOK, types.Token{Token: token})
+	}
+}
+
+func (dr *devicesRouter) reject(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	if err := dr.DeviceManager.Reject(vars["id"]); err != nil {
+		return err
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
 }

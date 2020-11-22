@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"encoding/json"
 
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/gorilla/mux"
@@ -70,8 +71,18 @@ func (broker *Broker) configure() *mqtt.ClientOptions {
 	return opts
 }
 
-func (broker *Broker) Publish(topic string, payload interface{}) {
+func (broker *Broker) Publish(topic string, payload interface{}) (err error) {
+	switch payload.(type) {
+	case string, []byte, bytes.Buffer:
+		// message type is ok
+	default:
+		// must encode to json
+		if payload, err = json.Marshal(payload); err != nil {
+			return err
+		}
+	}
 	broker.pubQ <- broker.client.Publish(topic, broker.qos, false, payload)
+	return nil
 }
 
 func (broker *Broker) drainPubQ() {
@@ -157,14 +168,21 @@ func (broker *Broker) serveMQTT(client mqtt.Client, msg mqtt.Message) {
 	var version, token, method, path, requestId string
 
 	// Parse request topic
-	version, token = sp[1], sp[2]
-	if len(sp) >= 6 && sp[len(sp)-2] == "request" {
-		method = "GET"
-		requestId = sp[len(sp)-1]
-		path = strings.Join(sp[3:len(sp)-2], "/")
-	} else {
+	if len(sp) == 4 && sp[2] == "me" && sp[3] == "claim" {
+		// special case for api/v1/me/claim, there is no token in the topic
+		version = sp[1]
 		method = "POST"
-		path = strings.Join(sp[3:], "/")
+		path = "me/claim"
+	} else {
+		version, token = sp[1], sp[2]
+		if len(sp) >= 6 && sp[len(sp)-2] == "request" {
+			method = "GET"
+			requestId = sp[len(sp)-1]
+			path = strings.Join(sp[3:len(sp)-2], "/")
+		} else {
+			method = "POST"
+			path = strings.Join(sp[3:], "/")
+		}
 	}
 
 	// Create fake HTTP request
@@ -176,7 +194,9 @@ func (broker *Broker) serveMQTT(client mqtt.Client, msg mqtt.Message) {
 		return
 	}
 
-	r.Header.Set("Authorization", "bearer "+token)
+	if token != "" {
+		r.Header.Set("Authorization", "bearer "+token)
+	}
 	if method == "POST" {
 		r.Header.Set("Content-Type", "application/json")
 	}

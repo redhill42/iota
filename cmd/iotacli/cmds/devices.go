@@ -19,6 +19,9 @@ Additional commands, type iotacli help COMMAND for more details:
   device:update      Update a device's attributes
   device:remove      Permanently remove a device
   device:rpc         Make a remote procedure call on a device
+  device:claims      Show current device claims
+  device:approve     Approve a device claim
+  device:reject      Reject a device claim
 `
 
 func (cli *ClientCli) CmdDevice(args ...string) error {
@@ -143,4 +146,56 @@ func (cli *ClientCli) CmdDeviceRPC(args ...string) error {
 		return err
 	}
 	return cli.RPC(context.Background(), id, requestId, req)
+}
+
+func (cli *ClientCli) CmdDeviceClaims(args ...string) error {
+	cmd := cli.Subcmd("device:claims", "")
+	cmd.Require(mflag.Exact, 0)
+	cmd.ParseFlags(args, false)
+
+	if err := cli.ConnectAndLogin(); err != nil {
+		return err
+	}
+
+	claims, err := cli.GetClaims(context.Background())
+	if err == nil {
+		cli.writeJson(claims)
+	}
+	return err
+}
+
+func (cli *ClientCli) CmdDeviceApprove(args ...string) error {
+	cmd := cli.Subcmd("device:approve", "claim-id [updates]")
+	cmd.Require(mflag.Min, 1)
+	cmd.Require(mflag.Max, 2)
+	cmd.ParseFlags(args, false)
+
+	claimId := cmd.Arg(0)
+	updates := make(map[string]interface{})
+	if cmd.NArg() == 2 {
+		if err := json.Unmarshal([]byte(cmd.Arg(1)), &updates); err != nil {
+			return err
+		}
+	}
+
+	if err := cli.ConnectAndLogin(); err != nil {
+		return err
+	}
+
+	token, err := cli.ApproveDevice(context.Background(), claimId, updates)
+	if err == nil {
+		fmt.Fprintln(cli.stdout, token)
+	}
+	return err
+}
+
+func (cli *ClientCli) CmdDeviceReject(args ...string) error {
+	cmd := cli.Subcmd("device:reject", "claim-id")
+	cmd.Require(mflag.Exact, 1)
+	cmd.ParseFlags(args, false)
+
+	if err := cli.ConnectAndLogin(); err != nil {
+		return err
+	}
+	return cli.RejectDevice(context.Background(), cmd.Arg(0))
 }

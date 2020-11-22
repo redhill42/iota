@@ -27,3 +27,25 @@ func (e DeviceNotFoundError) Error() string {
 func (e DeviceNotFoundError) HTTPErrorStatusCode() int {
 	return http.StatusNotFound
 }
+
+// The DuplicateClaimError indicates that a device claiming is already exists.
+type DuplicateClaimError string
+
+// The ClaimNotFoundError indicates that a device claiming is not found.
+type ClaimNotFoundError string
+
+func (e DuplicateClaimError) Error() string {
+	return fmt.Sprintf("Device claim with id '%s' is in progress, please wait.", string(e))
+}
+
+func (e DuplicateClaimError) HTTPErrorStatusCode() int {
+	return http.StatusConflict
+}
+
+func (e ClaimNotFoundError) Error() string {
+	return fmt.Sprintf("No such device claim: %s", string(e))
+}
+
+func (e ClaimNotFoundError) HTTPErrorStatusCode() int {
+	return http.StatusNotFound
+}

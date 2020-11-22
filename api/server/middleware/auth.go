@@ -19,7 +19,7 @@ type authMiddleware struct {
 func NewAuthMiddleware(agent *agent.Agent, contextRoot string) authMiddleware {
 	return authMiddleware{
 		agent,
-		regexp.MustCompile("^" + contextRoot + "(/v[0-9.]+)?/(version|auth|swagger.json)"),
+		regexp.MustCompile("^" + contextRoot + "(/v[0-9.]+)?/(version|auth|me/claim|swagger.json)"),
 		regexp.MustCompile("^" + contextRoot + "(/v[0-9.]+)?/me"),
 	}
 }
