@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
-	"encoding/json"
 
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/gorilla/mux"
@@ -170,9 +171,7 @@ func (broker *Broker) serveMQTT(client mqtt.Client, msg mqtt.Message) {
 	// Parse request topic
 	if len(sp) == 4 && sp[2] == "me" && sp[3] == "claim" {
 		// special case for api/v1/me/claim, there is no token in the topic
-		version = sp[1]
-		method = "POST"
-		path = "me/claim"
+		version, method, path = sp[1], "POST", "me/claim"
 	} else {
 		version, token = sp[1], sp[2]
 		if len(sp) >= 6 && sp[len(sp)-2] == "request" {
@@ -185,10 +184,36 @@ func (broker *Broker) serveMQTT(client mqtt.Client, msg mqtt.Message) {
 		}
 	}
 
+	var r *http.Request
+	var err error
+
 	// Create fake HTTP request
-	uri := "/api/" + version + "/" + path
-	body := bytes.NewReader(msg.Payload())
-	r, err := http.NewRequest(method, uri, body)
+	apiPath := "/api/" + version + "/" + path
+	if method == "GET" {
+		if len(msg.Payload()) == 0 {
+			r, err = http.NewRequest(method, apiPath, nil)
+		} else {
+			var q map[string]string
+			err := json.Unmarshal(msg.Payload(), &q)
+			if err != nil {
+				logrus.WithError(err).Errorf("Invalid query parameter: %s", string(msg.Payload()))
+				return
+			}
+
+			query := make(url.Values)
+			for k, v := range q {
+				query.Add(k, v)
+			}
+			u := url.URL{
+				Path:     apiPath,
+				RawQuery: query.Encode(),
+			}
+			r, err = http.NewRequest(method, u.String(), nil)
+		}
+	} else {
+		body := bytes.NewReader(msg.Payload())
+		r, err = http.NewRequest(method, apiPath, body)
+	}
 	if err != nil {
 		logrus.WithError(err).Error("Failed to create request")
 		return
