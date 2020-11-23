@@ -120,7 +120,6 @@ func (db *mongodb) GetSecret(key string, gen func() []byte) ([]byte, error) {
 	return record.Secret, err
 }
 
-func (db *mongodb) Close() error {
+func (db *mongodb) Close() {
 	db.session.Close()
-	return nil
 }

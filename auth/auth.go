@@ -2,12 +2,13 @@ package auth
 
 import (
 	"crypto/rand"
+	"net/http"
+	"time"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
 	"github.com/redhill42/iota/auth/userdb"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"time"
 )
 
 const _TOKEN_EXPIRE_TIME = time.Hour * 24 * 30 // 30 days
@@ -56,10 +57,10 @@ func (auth *Authenticator) Verify(r *http.Request) (*userdb.BasicUser, error) {
 	var claims jwt.StandardClaims
 
 	// Get token from request
-	_, err := request.ParseFromRequestWithClaims(r, request.AuthorizationHeaderExtractor, &claims,
+	_, err := request.ParseFromRequest(r, request.AuthorizationHeaderExtractor,
 		func(token *jwt.Token) (interface{}, error) {
 			return auth.secret, nil
-		})
+		}, request.WithClaims(&claims))
 
 	// If the token is missing or invalid, return error
 	if err != nil {

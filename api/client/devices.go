@@ -45,20 +45,26 @@ func (api *APIClient) CreateDevice(ctx context.Context, attributes interface{}) 
 
 func (api *APIClient) UpdateDevice(ctx context.Context, id string, updates interface{}) error {
 	resp, err := api.Put(ctx, "/devices/"+id, nil, updates, nil)
-	resp.EnsureClosed()
+	if err == nil {
+		resp.EnsureClosed()
+	}
 	return err
 }
 
 func (api *APIClient) DeleteDevice(ctx context.Context, id string) error {
 	resp, err := api.Delete(ctx, "/devices/"+id, nil, nil)
-	resp.EnsureClosed()
+	if err == nil {
+		resp.EnsureClosed()
+	}
 	return err
 }
 
 func (api *APIClient) RPC(ctx context.Context, id, requestId string, request interface{}) error {
 	query := url.Values{"requestId": []string{requestId}}
 	resp, err := api.Post(ctx, "/devices/"+id+"/rpc", query, request, nil)
-	resp.EnsureClosed()
+	if err == nil {
+		resp.EnsureClosed()
+	}
 	return err
 }
 
@@ -85,6 +91,8 @@ func (api *APIClient) ApproveDevice(ctx context.Context, claimId string, updates
 
 func (api *APIClient) RejectDevice(ctx context.Context, claimId string) error {
 	resp, err := api.Post(ctx, "/claims/"+claimId+"/reject", nil, nil, nil)
-	resp.EnsureClosed()
+	if err == nil {
+		resp.EnsureClosed()
+	}
 	return err
 }

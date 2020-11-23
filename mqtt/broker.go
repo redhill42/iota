@@ -141,7 +141,7 @@ func (broker *Broker) Forward(mux *mux.Router) error {
 type fakeWriter struct {
 	header     http.Header
 	body       bytes.Buffer
-	statucCode int
+	statusCode int
 }
 
 func (w *fakeWriter) Header() http.Header {
@@ -156,7 +156,7 @@ func (w *fakeWriter) Write(p []byte) (int, error) {
 }
 
 func (w *fakeWriter) WriteHeader(statusCode int) {
-	w.statucCode = statusCode
+	w.statusCode = statusCode
 }
 
 func (broker *Broker) serveMQTT(client mqtt.Client, msg mqtt.Message) {

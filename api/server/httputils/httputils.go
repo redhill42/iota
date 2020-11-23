@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/redhill42/iota/auth/userdb"
-	"github.com/sirupsen/logrus"
 	"mime"
 	"net/http"
 	"strings"
+
+	"github.com/redhill42/iota/auth/userdb"
+	"github.com/sirupsen/logrus"
 )
 
 // key is an unexported type for keys defined in this package

@@ -23,7 +23,7 @@ func NewAPIServer(agent *agent.Agent) (api *Server, err error) {
 	)
 
 	// Forward MQTT request to API server.
-	agent.MQTTBroker.Forward(api.Mux)
+	err = agent.MQTTBroker.Forward(api.Mux)
 
-	return api, nil
+	return api, err
 }

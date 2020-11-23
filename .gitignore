@@ -3,6 +3,7 @@
 *.ipr
 *.iws
 *.iml
+.idea/
 .DS_Store
 .gopath/
 bundles/

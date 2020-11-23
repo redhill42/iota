@@ -2,11 +2,12 @@ package config
 
 import (
 	"bytes"
-	"github.com/redhill42/iota/pkg/conf"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/redhill42/iota/pkg/conf"
 )
 
 type Config struct {

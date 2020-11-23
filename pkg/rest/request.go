@@ -5,15 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/redhill42/iota/pkg/rest/transport/cancellable"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/redhill42/iota/pkg/rest/transport/cancellable"
 )
 
-// serverResponse is a wrapper for http API responses.
+// ServerResponse is a wrapper for http API responses.
 type ServerResponse struct {
 	Body       io.ReadCloser
 	Header     http.Header
@@ -85,7 +86,7 @@ func (cli *Client) sendClientRequest(ctx context.Context, method, path string, q
 		StatusCode: -1,
 	}
 
-	expectedPayload := (method == "POST" || method == "PUT")
+	expectedPayload := method == "POST" || method == "PUT"
 	if expectedPayload && body == nil {
 		body = bytes.NewReader([]byte{})
 	}

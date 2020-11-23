@@ -16,7 +16,7 @@ type authMiddleware struct {
 	deviceAuthPattern *regexp.Regexp
 }
 
-func NewAuthMiddleware(agent *agent.Agent, contextRoot string) authMiddleware {
+func NewAuthMiddleware(agent *agent.Agent, contextRoot string) Middleware {
 	return authMiddleware{
 		agent,
 		regexp.MustCompile("^" + contextRoot + "(/v[0-9.]+)?/(version|auth|me/claim|swagger.json)"),

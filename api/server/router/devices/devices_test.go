@@ -60,13 +60,13 @@ func (w *fakeWriter) Err(id string) error {
 }
 
 var _ = Describe("DevicesRouter", func() {
-	var mgr *device.DeviceManager
+	var mgr *device.Manager
 	var mux *mux.Router
 
 	BeforeEach(func() {
 		var err error
 
-		mgr, err = device.NewDeviceManager(nil)
+		mgr, err = device.NewManager(nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create fake agent that only support device manager

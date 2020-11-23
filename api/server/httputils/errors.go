@@ -92,7 +92,7 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 
 	if statusCode >= 500 {
 		logrus.Error(serverError)
-		http.Error(w, "Internel server error", statusCode)
+		http.Error(w, "Internal server error", statusCode)
 	} else {
 		logrus.Debug(serverError)
 		http.Error(w, err.Error(), statusCode)

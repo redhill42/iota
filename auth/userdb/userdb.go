@@ -21,7 +21,7 @@ type Plugin interface {
 	// Find the user by name.
 	Find(name string, result User) error
 
-	// Searchs user database by the given filter.
+	// Search user database by the given filter.
 	Search(filter interface{}, result interface{}) error
 
 	// Remove the user from the database.
@@ -36,7 +36,7 @@ type Plugin interface {
 	GetSecret(key string, gen func() []byte) ([]byte, error)
 
 	// Close the user database.
-	Close() error
+	Close()
 }
 
 // PluginFunc represents a plugin initialization function.
@@ -136,7 +136,7 @@ func (db *UserDatabase) Create(user User, password string) error {
 	basic := user.Basic()
 
 	if basic.Name == "" || len(password) == 0 {
-		return fmt.Errorf("Missing required parameters")
+		return errors.New("missing required parameters")
 	}
 
 	hashedPassword, err := hashPassword(password)
@@ -221,6 +221,6 @@ func (db *UserDatabase) GetSecret(key string, gen func() []byte) ([]byte, error)
 	return db.plugin.GetSecret(key, gen)
 }
 
-func (db *UserDatabase) Close() error {
-	return db.plugin.Close()
+func (db *UserDatabase) Close() {
+	db.plugin.Close()
 }

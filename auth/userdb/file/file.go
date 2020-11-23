@@ -99,6 +99,5 @@ func (db *fileDB) GetSecret(key string, gen func() []byte) ([]byte, error) {
 	return newSecret, err
 }
 
-func (db *fileDB) Close() error {
-	return nil
+func (db *fileDB) Close() {
 }

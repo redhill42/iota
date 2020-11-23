@@ -16,7 +16,7 @@ import (
 type Agent struct {
 	Users         *userdb.UserDatabase
 	Authz         *auth.Authenticator
-	DeviceManager *device.DeviceManager
+	DeviceManager *device.Manager
 	MQTTBroker    *mqtt.Broker
 	TSDB          tsdb.TSDB
 }
@@ -44,7 +44,7 @@ func New() (agent *Agent, err error) {
 		return nil, err
 	}
 
-	agent.DeviceManager, err = device.NewDeviceManager(agent.MQTTBroker)
+	agent.DeviceManager, err = device.NewManager(agent.MQTTBroker)
 	if err != nil {
 		return nil, err
 	}
