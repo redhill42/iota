@@ -20,7 +20,7 @@ type Broker struct {
 	client mqtt.Client
 	mux    *mux.Router
 	qos    byte
-	pubQ   chan mqtt.Token
+	tokenQ chan mqtt.Token
 }
 
 func NewBroker(username, password string) (*Broker, error) {
@@ -32,8 +32,8 @@ func NewBroker(username, password string) (*Broker, error) {
 		return nil, t.Error()
 	}
 
-	broker.pubQ = make(chan mqtt.Token, 100)
-	go broker.drainPubQ()
+	broker.tokenQ = make(chan mqtt.Token, 100)
+	go broker.drainTokenQ()
 	return broker, nil
 }
 
@@ -65,6 +65,8 @@ func (broker *Broker) configure(username, password string) *mqtt.ClientOptions {
 	opts.SetClientID(clientid)
 	opts.SetUsername(username)
 	opts.SetPassword(password)
+	opts.SetOnConnectHandler(broker.onConnect)
+	opts.SetCleanSession(false)
 
 	return opts
 }
@@ -79,13 +81,13 @@ func (broker *Broker) Publish(topic string, payload interface{}) (err error) {
 			return err
 		}
 	}
-	broker.pubQ <- broker.client.Publish(topic, broker.qos, false, payload)
+	broker.tokenQ <- broker.client.Publish(topic, broker.qos, false, payload)
 	return nil
 }
 
-func (broker *Broker) drainPubQ() {
+func (broker *Broker) drainTokenQ() {
 	for {
-		t, more := <-broker.pubQ
+		t, more := <-broker.tokenQ
 		if !more || t == nil {
 			break
 		}
@@ -97,9 +99,11 @@ func (broker *Broker) drainPubQ() {
 }
 
 func (broker *Broker) Close() {
-	broker.pubQ <- nil
+	broker.tokenQ <- nil
 	broker.client.Disconnect(250)
 }
+
+const apiTopic = "api/+/+/#"
 
 // Subscribe mqtt topic and forward to API server. The topic has the
 // following pattern:
@@ -115,7 +119,7 @@ func (broker *Broker) Close() {
 //
 // If the path ends with "/request/$request_id", where $request_id is a request
 // identifier allocated by client, then this is a GET request. Client must subscribe
-// to a response topic to recieve response message. The response topic has the form
+// to a response topic to receive response message. The response topic has the form
 //    <token>/<path>/response/$request_id
 // Note that the response topic doesn't contains "api/v1" prefix.
 //
@@ -127,11 +131,18 @@ func (broker *Broker) Forward(mux *mux.Router) error {
 		panic("MQTT broker already forwarded")
 	}
 	broker.mux = mux
-	if t := broker.client.Subscribe("api/+/+/#", broker.qos, broker.serveMQTT); t.Wait() && t.Error() != nil {
+	if t := broker.client.Subscribe(apiTopic, broker.qos, broker.serveMQTT); t.Wait() && t.Error() != nil {
 		broker.mux = nil
 		return t.Error()
 	} else {
 		return nil
+	}
+}
+
+func (broker *Broker) onConnect(client mqtt.Client) {
+	logrus.Info("Connected to MQTT broker")
+	if broker.mux != nil {
+		broker.tokenQ <- client.Subscribe(apiTopic, broker.qos, broker.serveMQTT)
 	}
 }
 
@@ -230,6 +241,13 @@ func (broker *Broker) serveMQTT(client mqtt.Client, msg mqtt.Message) {
 	// Send response message
 	if method == "GET" {
 		responseTopic := token + "/" + path + "/response/" + requestId
-		broker.Publish(responseTopic, w.body.Bytes())
+		if w.statusCode < 200 || w.statusCode >= 300 {
+			_ = broker.Publish(responseTopic, map[string]interface{}{
+				"$status": w.statusCode,
+				"$error":  string(w.body.Bytes()),
+			})
+		} else {
+			_ = broker.Publish(responseTopic, w.body.Bytes())
+		}
 	}
 }
