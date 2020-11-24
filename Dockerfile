@@ -29,6 +29,7 @@ RUN apt-get clean && apt-get update && apt-get install -y --no-install-recommend
     gcc-mingw-w64 \
     git \
     gnupg \
+    libssl-dev \
     ssh-client \
     jq \
     libtool \
@@ -103,6 +104,15 @@ RUN set -x \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& rm -rf /var/lib/mongodb \
 	&& mv /etc/mongod.conf /etc/mongod.conf.orig
+
+# Install mosquitto
+ENV MOSQUITTO_VERSION=1.6.12
+RUN wget http://mosquitto.org/files/source/mosquitto-${MOSQUITTO_VERSION}.tar.gz \
+    && tar xzvf mosquitto-${MOSQUITTO_VERSION}.tar.gz \
+    && rm mosquitto-${MOSQUITTO_VERSION}.tar.gz \
+    && cd mosquitto-${MOSQUITTO_VERSION} \
+    && make && make install \
+    && groupadd -r mosquitto && useradd -r -g mosquitto mosquitto
 
 # Compile Go for cross compilation
 ENV CROSSPLATFORMS \

@@ -1,6 +1,7 @@
 package userdb
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
@@ -217,8 +218,12 @@ func (db *UserDatabase) ChangePassword(name string, oldPassword, newPassword str
 // GetSecret returns a secret key used to sign the JWT token. If the
 // secret key does not exist in the database, a new key is generated
 // and saved to the database.
-func (db *UserDatabase) GetSecret(key string, gen func() []byte) ([]byte, error) {
-	return db.plugin.GetSecret(key, gen)
+func (db *UserDatabase) GetSecret() ([]byte, error) {
+	return db.plugin.GetSecret("jwt", func() []byte {
+		secret := make([]byte, 64)
+		rand.Read(secret)
+		return secret
+	})
 }
 
 func (db *UserDatabase) Close() {

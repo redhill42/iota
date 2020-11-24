@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+DLL_EXTENSION="$(dll_extension)"
+DLL_FULLNAME="$DLL_SHORT_NAME$DLL_EXTENSION"
+
+export GOGC=${PROJ_BUILD_GOGC:-1000}
+
+if [ "${GOOS}/${GOARCH}" != "$(go env GOHOSTOS)/$(go env GOHOSTARCH)" ]; then
+    # must be cross-compiling!
+    case "${GOOS}/${GOARCH}" in
+      windows/amd64)
+        export CC=x86_64-w64-mingw32-gcc
+        export CGO_ENABLED=1
+        ;;
+
+      darwin/amd64)
+        export CC=o64-clang
+        export CGO_ENABLED=1
+      ;;
+    esac
+fi
+
+echo "Building: $DEST/$DLL_FULLNAME"
+
+go build -buildmode=c-archive \
+    -o $SOURCE_PATH \
+    $SOURCE_PATH/$DLL_SHORT_NAME.go
+
+go build -buildmode=c-shared \
+    -o "$DEST/$DLL_FULLNAME" \
+    $SOURCE_PATH
+
+rm -f $SOURCE_PATH/$DLL_SHORT_NAME.{a,lib}
+rm -f $SOURCE_PATH/$DLL_SHORT_NAME.h
+rm -f $DEST/$DLL_SHORT_NAME.h

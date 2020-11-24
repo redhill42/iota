@@ -17,5 +17,16 @@ for platform in ${CROSS:-$CROSSPLATFORMS}; do
         source "${MAKEDIR}/.binary"
       )
     done
+
+    if [ "${GOOS}" != 'windows' ] && [ "${GOARCH}" != 'arm' ]; then # FIXME
+      (
+        export DLL_SHORT_NAME=go-auth
+        export SOURCE_PATH="./mqtt/mosquitto"
+        export CGO_CFLAGS="-I/usr/local/include -fPIC"
+        export CGO_LDFLAGS="-shared"
+        export OSXCROSS_NO_INCLUDE_PATH_WARNINGS=1
+        source "${MAKEDIR}/.dll"
+      )
+    fi
   )
 done

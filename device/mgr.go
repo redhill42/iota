@@ -52,6 +52,14 @@ func (mgr *Manager) Verify(r *http.Request) (string, error) {
 	return claims.Subject, err
 }
 
+func (mgr *Manager) VerifyToken(token string) (string, error) {
+	var claims jwt.StandardClaims
+	_, err := jwt.ParseWithClaims(token, &claims, func(token *jwt.Token) (interface{}, error) {
+		return mgr.secret, nil
+	})
+	return claims.Subject, err
+}
+
 func (mgr *Manager) Update(id string, updates map[string]interface{}) error {
 	err := mgr.deviceDB.Update(id, updates)
 	if err != nil {

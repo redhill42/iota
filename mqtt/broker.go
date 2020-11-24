@@ -23,9 +23,9 @@ type Broker struct {
 	pubQ   chan mqtt.Token
 }
 
-func NewBroker() (*Broker, error) {
+func NewBroker(username, password string) (*Broker, error) {
 	broker := new(Broker)
-	opts := broker.configure()
+	opts := broker.configure(username, password)
 
 	broker.client = mqtt.NewClient(opts)
 	if t := broker.client.Connect(); t.Wait() && t.Error() != nil {
@@ -37,23 +37,13 @@ func NewBroker() (*Broker, error) {
 	return broker, nil
 }
 
-func (broker *Broker) configure() *mqtt.ClientOptions {
+func (broker *Broker) configure(username, password string) *mqtt.ClientOptions {
 	server := config.GetOption("mqtt", "url")
-	user := config.GetOption("mqtt", "user")
-	password := config.GetOption("mqtt", "password")
-	clientId := config.GetOption("mqtt", "clientId")
-	qos := config.GetOption("mqtt", "qos")
-
 	if server == "" {
 		server = "tcp://127.0.0.1:1883"
 	}
 
-	if clientId == "" {
-		buf := make([]byte, 16)
-		rand.Read(buf)
-		clientId = hex.EncodeToString(buf)
-	}
-
+	qos := config.GetOption("mqtt", "qos")
 	if qos != "" {
 		qosValue, err := strconv.Atoi(qos)
 		if err != nil || qosValue < 0 || qosValue > 2 {
@@ -63,10 +53,17 @@ func (broker *Broker) configure() *mqtt.ClientOptions {
 		}
 	}
 
+	clientid := config.GetOption("mqtt", "clientid")
+	if clientid == "" {
+		buf := make([]byte, 16)
+		rand.Read(buf)
+		clientid = hex.EncodeToString(buf)
+	}
+
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(server)
-	opts.SetClientID(clientId)
-	opts.SetUsername(user)
+	opts.SetClientID(clientid)
+	opts.SetUsername(username)
 	opts.SetPassword(password)
 
 	return opts

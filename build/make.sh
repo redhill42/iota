@@ -55,7 +55,6 @@ fi
 # List of bundles to create when no argument is passed
 DEFAULT_BUNDLES=(
     validate-gofmt
-    validate-vet
     binary
     tgz
     test-unit
@@ -146,6 +145,14 @@ fi
 binary_extension() {
     if [ "$(go env GOOS)" = 'windows' ]; then
         echo -n '.exe'
+    fi
+}
+
+dll_extension() {
+    if [ "$(go env GOOS)" == 'windows' ]; then
+        echo -n '.dll'
+    else
+        echo -n '.so'
     fi
 }
 

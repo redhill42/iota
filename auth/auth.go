@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"crypto/rand"
 	"net/http"
 	"time"
 
@@ -20,11 +19,7 @@ type Authenticator struct {
 }
 
 func NewAuthenticator(userdb *userdb.UserDatabase) (*Authenticator, error) {
-	secret, err := userdb.GetSecret("jwt", func() []byte {
-		secret := make([]byte, 64)
-		rand.Read(secret)
-		return secret
-	})
+	secret, err := userdb.GetSecret()
 	if err != nil {
 		return nil, err
 	}
