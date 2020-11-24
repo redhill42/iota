@@ -104,7 +104,7 @@ const (
 var (
 	claimRequestPattern  = regexp.MustCompile("^api/v[0-9.]+/me/claim$")
 	claimResponsePattern = regexp.MustCompile("^me/claim/([^/]+)$")
-	apiRequestPattern    = regexp.MustCompile("^api/v[0-9.]+/([^/]+)/me/.+$")
+	apiRequestPattern    = regexp.MustCompile("^api/v[0-9.]+/([^/]+)/.+$")
 	apiResponsePattern   = regexp.MustCompile("^([^/]+)/me/.+$")
 )
 
@@ -134,15 +134,16 @@ func AuthAclCheck(clientid, username, topic string, acc int) bool {
 	// subscribe response on "%u/me/attributes/response". It can also subscribe
 	// request on "%u/me/rpc/request" and publish response to "%u/me/rpc/response"
 	if _, err := devices.VerifyToken(username); err == nil {
-		if acc == _MOSQ_ACL_WRITE {
-			m := apiRequestPattern.FindStringSubmatch(topic)
-			if len(m) == 2 && m[1] == username {
-				return true
-			}
+		if m := apiRequestPattern.FindStringSubmatch(topic); len(m) == 2 {
+			return acc == _MOSQ_ACL_WRITE && m[1] == username
 		}
 
-		m := apiResponsePattern.FindStringSubmatch(topic)
-		return len(m) == 2 && m[1] == username
+		if m := apiResponsePattern.FindStringSubmatch(topic); len(m) == 2 {
+			return m[1] == username
+		}
+
+		// devices can communicate each other on any topics
+		return true
 	}
 
 	// authorized users has full access on any topic
