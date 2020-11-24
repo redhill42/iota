@@ -14,23 +14,23 @@ const _TOKEN_EXPIRE_TIME = time.Hour * 24 * 30 // 30 days
 
 // The authenticator authenticate user via http protocol
 type Authenticator struct {
-	userdb *userdb.UserDatabase
+	db     *userdb.UserDatabase
 	secret []byte
 }
 
-func NewAuthenticator(userdb *userdb.UserDatabase) (*Authenticator, error) {
-	secret, err := userdb.GetSecret()
+func NewAuthenticator(db *userdb.UserDatabase) (*Authenticator, error) {
+	secret, err := db.GetSecret()
 	if err != nil {
 		return nil, err
 	}
-	return &Authenticator{userdb, secret}, nil
+	return &Authenticator{db, secret}, nil
 }
 
 // Authenticate user with name and password. Returns the User object
 // and a token
 func (auth *Authenticator) Authenticate(username, password string) (*userdb.BasicUser, string, error) {
 	// Authenticate user by user database
-	user, err := auth.userdb.Authenticate(username, password)
+	user, err := auth.db.Authenticate(username, password)
 	if err != nil {
 		return nil, "", err
 	}
@@ -63,4 +63,16 @@ func (auth *Authenticator) Verify(r *http.Request) (*userdb.BasicUser, error) {
 	}
 
 	return &userdb.BasicUser{Name: claims.Subject}, nil
+}
+
+func (auth *Authenticator) VerifyToken(token string) (string, error) {
+	var claims jwt.StandardClaims
+	_, err := jwt.ParseWithClaims(token, &claims, func(token *jwt.Token) (interface{}, error) {
+		return auth.secret, nil
+	})
+	return claims.Subject, err
+}
+
+func (auth *Authenticator) GetSecret() []byte {
+	return auth.secret
 }

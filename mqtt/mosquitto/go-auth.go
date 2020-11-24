@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/redhill42/iota/auth"
 	"github.com/redhill42/iota/auth/userdb"
 	"github.com/redhill42/iota/config"
 	"github.com/redhill42/iota/device"
@@ -19,6 +20,7 @@ import (
 )
 
 var users *userdb.UserDatabase
+var authz *auth.Authenticator
 var devices *device.Manager
 
 const _SUPER_USER = "iota"
@@ -33,6 +35,11 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) bool {
 
 	if users, err = userdb.Open(); err != nil {
 		fmt.Fprintf(os.Stderr, "go-auth: cannot open user database: %v\n", err)
+		return false
+	}
+
+	if authz, err = auth.NewAuthenticator(users); err != nil {
+		fmt.Fprintf(os.Stderr, "go-auth: cannot initialize authenticator")
 		return false
 	}
 
@@ -56,30 +63,36 @@ func AuthPluginCleanup() {
 
 //export AuthUnpwdCheck
 func AuthUnpwdCheck(username, password, clientid string) bool {
+	var err error
+
 	// super user has full access to all topic
 	if username == _SUPER_USER {
-		rawSecret, err := users.GetSecret()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "go-auth: user database error: %v\n", err)
-			return false
-		}
-		return password == base64.StdEncoding.EncodeToString(rawSecret)
+		secret := authz.GetSecret()
+		return password == base64.StdEncoding.EncodeToString(secret)
 	}
 
-	// anonymous device can login to claim itself
+	// anonymous devices can login to claim itself
 	if username == "" {
 		return true
 	}
 
-	if password == "" {
-		// Authorized device must provide a valid token
-		_, err := devices.VerifyToken(username)
+	// A user can authenticate itself with username and password
+	if password != "" {
+		_, err = users.Authenticate(username, password)
 		return err == nil
 	}
 
-	// Normal user must authenticate itself
-	_, err := users.Authenticate(username, password)
-	return err == nil
+	// User can also authenticate with the access token
+	if _, err = authz.VerifyToken(username); err == nil {
+		return true
+	}
+
+	// Authorized device must provide a valid token
+	if _, err = devices.VerifyToken(username); err == nil {
+		return true
+	}
+
+	return false
 }
 
 const (
@@ -132,7 +145,7 @@ func AuthAclCheck(clientid, username, topic string, acc int) bool {
 		return len(m) == 2 && m[1] == username
 	}
 
-	// authorized users can publish and subscribe on any topic
+	// authorized users has full access on any topic
 	return true
 }
 
