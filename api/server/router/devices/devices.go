@@ -11,6 +11,7 @@ import (
 	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/api/server/router"
 	"github.com/redhill42/iota/api/types"
+	"github.com/redhill42/iota/device"
 )
 
 const devicePath = "/devices/{id:[^/]+}"
@@ -48,7 +49,11 @@ func (dr *devicesRouter) Routes() []router.Route {
 }
 
 func (dr *devicesRouter) list(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	result, err := dr.DeviceManager.FindAll()
+	var keys []string
+	if r.FormValue("keys") != "" {
+		keys = strings.Split(r.FormValue("keys"), ",")
+	}
+	result, err := dr.DeviceManager.FindAll(keys)
 	if err != nil {
 		return err
 	}
@@ -57,7 +62,7 @@ func (dr *devicesRouter) list(w http.ResponseWriter, r *http.Request, vars map[s
 
 func (dr *devicesRouter) create(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
 	var (
-		req       map[string]interface{}
+		req       device.Record
 		id, token string
 		ok        bool
 		err       error
@@ -89,28 +94,20 @@ func validateDeviceId(id string) bool {
 }
 
 func (dr *devicesRouter) read(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	info := make(map[string]interface{})
-	if err := dr.DeviceManager.Find(vars["id"], info); err != nil {
+	var keys []string
+	if r.FormValue("keys") != "" {
+		keys = strings.Split(r.FormValue("keys"), ",")
+	}
+	info, err := dr.DeviceManager.Find(vars["id"], keys)
+	if err != nil {
 		return err
 	}
-
-	keys := r.FormValue("keys")
-	if keys != "" {
-		filteredInfo := make(map[string]interface{})
-		for _, key := range strings.Split(keys, ",") {
-			if val, ok := info[key]; ok {
-				filteredInfo[key] = val
-			}
-		}
-		info = filteredInfo
-	}
-
 	return httputils.WriteJSON(w, http.StatusOK, &info)
 }
 
 func (dr *devicesRouter) update(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
 	var (
-		req map[string]interface{}
+		req device.Record
 		err error
 	)
 	if err = httputils.ReadJSON(r, &req); err != nil {
@@ -166,7 +163,7 @@ func (dr *devicesRouter) measurement(w http.ResponseWriter, r *http.Request, var
 
 func (dr *devicesRouter) claim(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
 	var (
-		req map[string]interface{}
+		req device.Record
 		id  string
 		ok  bool
 		err error
@@ -195,7 +192,7 @@ func (dr *devicesRouter) getClaims(w http.ResponseWriter, r *http.Request, vars 
 }
 
 func (dr *devicesRouter) approve(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	var updates map[string]interface{}
+	var updates device.Record
 	var id = vars["id"]
 
 	if err := httputils.ReadJSON(r, &updates); err != nil {

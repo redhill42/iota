@@ -60,7 +60,7 @@ func (mgr *Manager) VerifyToken(token string) (string, error) {
 	return claims.Subject, err
 }
 
-func (mgr *Manager) Update(id string, updates map[string]interface{}) error {
+func (mgr *Manager) Update(id string, updates Record) error {
 	err := mgr.deviceDB.Update(id, updates)
 	if err != nil {
 		return err
@@ -72,6 +72,7 @@ func (mgr *Manager) Update(id string, updates map[string]interface{}) error {
 		if err != nil {
 			return err
 		}
+		updates["id"] = id
 		return mgr.publisher.Publish(token+"/me/attributes", updates)
 	}
 
@@ -87,7 +88,7 @@ func (mgr *Manager) RPC(id, requestId string, req interface{}) error {
 	return mgr.publisher.Publish(topic, req)
 }
 
-func (mgr *Manager) Claim(claimId string, attributes map[string]interface{}) error {
+func (mgr *Manager) Claim(claimId string, attributes Record) error {
 	attributes["claim-id"] = claimId
 	attributes["claim-time"] = time.Now()
 
@@ -99,23 +100,23 @@ func (mgr *Manager) Claim(claimId string, attributes map[string]interface{}) err
 	}
 }
 
-func (mgr *Manager) GetClaims() []map[string]interface{} {
-	result := make([]map[string]interface{}, 0)
+func (mgr *Manager) GetClaims() []Record {
+	result := make([]Record, 0)
 	mgr.claims.Range(func(key, value interface{}) bool {
-		result = append(result, value.(map[string]interface{}))
+		result = append(result, value.(Record))
 		return true
 	})
 	return result
 }
 
-func (mgr *Manager) Approve(claimId string, updates map[string]interface{}) (token string, err error) {
+func (mgr *Manager) Approve(claimId string, updates Record) (token string, err error) {
 	v, loaded := mgr.claims.LoadAndDelete(claimId)
 	if !loaded {
 		return "", ClaimNotFoundError(claimId)
 	}
 
 	// Override claim attributes with approver provided attributes.
-	attributes := v.(map[string]interface{})
+	attributes := v.(Record)
 	for k, v := range updates {
 		if v == nil {
 			delete(attributes, k)

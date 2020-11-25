@@ -5,6 +5,7 @@ import (
 	"errors"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"strings"
 	"sync"
 
 	"github.com/redhill42/iota/config"
@@ -13,6 +14,48 @@ import (
 type deviceDB struct {
 	session *mgo.Session
 	cache   sync.Map
+}
+
+type selector bson.M
+
+func newSelector(keys []string) selector {
+	sel := make(selector)
+	for _, key := range keys {
+		key = strings.TrimSpace(key)
+		if key != "" {
+			if key == "id" {
+				key = "_id"
+			} else if key == "token" {
+				key = "_token"
+			}
+			sel[key] = 1
+		}
+	}
+	return sel
+}
+
+func (sel selector) contains(key string) bool {
+	if len(sel) == 0 {
+		return true
+	} else {
+		_, ok := sel[key]
+		return ok
+	}
+}
+
+type Record map[string]interface{}
+
+func (r Record) afterLoad(sel selector) {
+	if id, ok := r["_id"]; ok {
+		delete(r, "_id")
+		if sel.contains("_id") {
+			r["id"] = id
+		}
+	}
+	if tok, ok := r["_token"]; ok {
+		delete(r, "_token")
+		r["token"] = tok
+	}
 }
 
 func openDatabase() (*deviceDB, error) {
@@ -35,7 +78,7 @@ func (db *deviceDB) do(f func(c *mgo.Collection) error) error {
 	return err
 }
 
-func (db *deviceDB) Create(id, token string, attributes map[string]interface{}) error {
+func (db *deviceDB) Create(id, token string, attributes Record) error {
 	return db.do(func(c *mgo.Collection) error {
 		delete(attributes, "id")
 		delete(attributes, "token")
@@ -50,39 +93,41 @@ func (db *deviceDB) Create(id, token string, attributes map[string]interface{}) 
 	})
 }
 
-func (db *deviceDB) Find(id string, result map[string]interface{}) error {
-	return db.do(func(c *mgo.Collection) error {
-		err := c.FindId(id).One(result)
-		if err == mgo.ErrNotFound {
-			err = DeviceNotFoundError(id)
+func (db *deviceDB) Find(id string, keys []string) (result Record, err error) {
+	err = db.do(func(c *mgo.Collection) error {
+		var sel selector
+		if len(keys) == 0 {
+			err = c.FindId(id).One(&result)
+		} else {
+			sel = newSelector(keys)
+			err = c.FindId(id).Select(sel).One(&result)
 		}
-		if err != nil {
-			return err
-		}
-
-		token := result["_token"]
-		delete(result, "_id")
-		delete(result, "_token")
-		result["id"] = id
-		result["token"] = token
-		return nil
+		result.afterLoad(sel)
+		return err
 	})
+	return
 }
 
-func (db *deviceDB) FindAll() ([]string, error) {
-	var result []string
-	err := db.do(func(c *mgo.Collection) error {
-		var v struct {
-			Id string `bson:"_id"`
-		}
+func (db *deviceDB) FindAll(keys []string) (result []Record, err error) {
+	err = db.do(func(c *mgo.Collection) error {
+		var iter *mgo.Iter
+		var sel selector
+		var record Record
 
-		iter := c.Find(nil).Select(bson.M{"_id": 1}).Iter()
-		for iter.Next(&v) {
-			result = append(result, v.Id)
+		if len(keys) == 0 {
+			iter = c.Find(nil).Iter()
+		} else {
+			sel = newSelector(keys)
+			iter = c.Find(nil).Select(sel).Iter()
+		}
+		for iter.Next(&record) {
+			record.afterLoad(sel)
+			result = append(result, record)
+			record = nil
 		}
 		return iter.Close()
 	})
-	return result, err
+	return
 }
 
 func (db *deviceDB) GetToken(id string) (string, error) {
@@ -106,15 +151,31 @@ func (db *deviceDB) GetToken(id string) (string, error) {
 	return v.Token, err
 }
 
-func (db *deviceDB) Update(id string, fields map[string]interface{}) error {
-	return db.do(func(c *mgo.Collection) error {
+func (db *deviceDB) Update(id string, fields Record) error {
+	return db.do(func(c *mgo.Collection) (err error) {
 		delete(fields, "_id")
+		delete(fields, "id")
 		delete(fields, "_token")
+		delete(fields, "token")
 		if len(fields) == 0 {
 			return nil
 		}
 
-		err := c.UpdateId(id, bson.M{"$set": fields})
+		var remove []string
+		for k, v := range fields {
+			if v == nil {
+				delete(fields, k)
+				remove = append(remove, k)
+			}
+		}
+
+		if len(remove) == 0 {
+			err = c.UpdateId(id, bson.M{"$set": fields})
+		} else if len(fields) == 0 {
+			err = c.UpdateId(id, []bson.M{{"$unset": remove}})
+		} else {
+			err = c.UpdateId(id, []bson.M{{"$set": fields}, {"$unset": remove}})
+		}
 		if err == mgo.ErrNotFound {
 			err = DeviceNotFoundError(id)
 		}
@@ -122,7 +183,7 @@ func (db *deviceDB) Update(id string, fields map[string]interface{}) error {
 	})
 }
 
-func (db *deviceDB) Upsert(id, token string, fields map[string]interface{}) error {
+func (db *deviceDB) Upsert(id, token string, fields Record) error {
 	return db.do(func(c *mgo.Collection) error {
 		delete(fields, "id")
 		delete(fields, "_id")

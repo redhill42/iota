@@ -2,10 +2,10 @@ package cmds
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 
-	"encoding/json"
 	"github.com/redhill42/iota/pkg/mflag"
 )
 
@@ -46,10 +46,9 @@ func (cli *ClientCli) CmdDevice(args ...string) error {
 	}
 
 	if cmd.NArg() == 0 {
-		if devices, err := cli.GetDevices(context.Background()); err == nil {
-			for _, id := range devices {
-				fmt.Fprintln(cli.stdout, id)
-			}
+		devices := make([]map[string]interface{}, 0)
+		if err := cli.GetDevices(context.Background(), keys, &devices); err == nil {
+			cli.writeJson(devices)
 		}
 	} else {
 		id := cmd.Arg(0)

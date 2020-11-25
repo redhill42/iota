@@ -8,14 +8,18 @@ import (
 	"github.com/redhill42/iota/api/types"
 )
 
-func (api *APIClient) GetDevices(ctx context.Context) ([]string, error) {
-	var devices []string
-	resp, err := api.Get(ctx, "/devices", nil, nil)
+func (api *APIClient) GetDevices(ctx context.Context, keys string, result interface{}) error {
+	var query url.Values
+	if keys != "" {
+		query = url.Values{"keys": []string{keys}}
+	}
+
+	resp, err := api.Get(ctx, "/devices", query, nil)
 	if err == nil {
-		err = json.NewDecoder(resp.Body).Decode(&devices)
+		err = json.NewDecoder(resp.Body).Decode(result)
 		resp.EnsureClosed()
 	}
-	return devices, err
+	return err
 }
 
 func (api *APIClient) GetDevice(ctx context.Context, id, keys string, info interface{}) error {
