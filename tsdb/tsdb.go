@@ -24,12 +24,12 @@ type influx struct {
 }
 
 func New() (TSDB, error) {
-	serverURL := config.GetOption("influxdb", "server")
+	url := config.GetOption("influxdb", "url")
 	token := config.GetOption("influxdb", "token")
 	org := config.GetOption("influxdb", "org")
 	bucket := config.GetOption("influxdb", "bucket")
 
-	if serverURL == "" || token == "" {
+	if url == "" || token == "" {
 		return nil, errors.New("InfluxDB was not configured correctly")
 	}
 	if org == "" {
@@ -39,7 +39,7 @@ func New() (TSDB, error) {
 		bucket = "iota"
 	}
 
-	client := influxdb.NewClient(serverURL, token)
+	client := influxdb.NewClient(url, token)
 	if _, err := client.Ready(context.Background()); err != nil {
 		return nil, err
 	}

@@ -50,7 +50,7 @@ func (cli *ClientCli) CmdDevice(args ...string) error {
 
 	if cmd.NArg() == 0 {
 		devices := make([]map[string]interface{}, 0)
-		if err := cli.GetDevices(context.Background(), keys, &devices); err == nil {
+		if err = cli.GetDevices(context.Background(), keys, &devices); err == nil {
 			cli.writeJson(devices)
 		}
 	} else {

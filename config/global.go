@@ -8,9 +8,6 @@ import (
 	"strings"
 )
 
-// The root directory of iota installation.
-var RootDir string
-
 // The global debug flag
 var Debug bool
 
@@ -22,18 +19,16 @@ var ErrNotInitialized = errors.New("The configuration was not initialized")
 
 // Initialize the global configuration file.
 func Initialize() (err error) {
-	// Determine the root installation directory
-	RootDir = os.Getenv("IOTA_ROOT")
-	if RootDir == "" {
-		RootDir = "/usr/local/iota" // the default root
+	// Determine configuration file from environment variable
+	filename := os.Getenv("IOTA_CONFIG_FILE")
+	if filename == "" {
+		filename = "/usr/local/iota/conf/iota.conf" // the default
 	}
-	RootDir, err = filepath.Abs(RootDir)
-	if err != nil {
+	if filename, err = filepath.Abs(filename); err != nil {
 		return err
 	}
 
 	// Load configuration file
-	filename := filepath.Join(RootDir, "conf", "iota.conf")
 	global, err = Open(filename)
 	if err != nil && !os.IsNotExist(err) { // Use defaults if configuration file is missing
 		return err
