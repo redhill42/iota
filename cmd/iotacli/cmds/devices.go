@@ -3,8 +3,11 @@ package cmds
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/redhill42/iota/pkg/mflag"
 )
@@ -130,21 +133,51 @@ func (cli *ClientCli) CmdDeviceDelete(args ...string) error {
 func (cli *ClientCli) CmdDeviceRPC(args ...string) error {
 	var requestId string
 
-	cmd := cli.Subcmd("device:rpc", "[OPTIONS] ID REQUEST")
-	cmd.Require(mflag.Exact, 2)
-	cmd.StringVar(&requestId, []string{"i"}, "", "Request identifier")
+	cmd := cli.Subcmd("device:rpc", "[OPTIONS] ID METHOD [PARAMETER=VALUE...]")
+	cmd.Require(mflag.Min, 2)
+	cmd.StringVar(&requestId, []string{"i"}, "0", "Request identifier")
 	cmd.ParseFlags(args, true)
 
+	params := make(map[string]interface{})
+	for i := 2; i < cmd.NArg(); i++ {
+		p := cmd.Arg(i)
+		s := strings.IndexRune(p, '=')
+		if s == -1 {
+			return errors.New("missing '=' in method parameter")
+		}
+		params[p[0:s]] = convert(p[s+1:])
+	}
+
 	id := cmd.Arg(0)
-	req := make(map[string]interface{})
+	req := map[string]interface{}{
+		"id":     0,
+		"method": cmd.Arg(1),
+		"param":  params,
+	}
 
 	if err := cli.ConnectAndLogin(); err != nil {
 		return err
 	}
-	if err := json.Unmarshal([]byte(cmd.Arg(1)), &req); err != nil {
-		return err
-	}
 	return cli.RPC(context.Background(), id, requestId, req)
+}
+
+func convert(value string) interface{} {
+	if len(value) >= 2 && strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"") {
+		return value[1 : len(value)-1]
+	}
+	if len(value) >= 2 && strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'") {
+		return value[1 : len(value)-1]
+	}
+	if b, err := strconv.ParseBool(value); err == nil {
+		return b
+	}
+	if i, err := strconv.ParseInt(value, 10, 64); err == nil {
+		return i
+	}
+	if f, err := strconv.ParseFloat(value, 64); err == nil {
+		return f
+	}
+	return value
 }
 
 func (cli *ClientCli) CmdDeviceClaims(args ...string) error {
@@ -164,7 +197,7 @@ func (cli *ClientCli) CmdDeviceClaims(args ...string) error {
 }
 
 func (cli *ClientCli) CmdDeviceApprove(args ...string) error {
-	cmd := cli.Subcmd("device:approve", "claim-id [updates]")
+	cmd := cli.Subcmd("device:approve", "CLAIM-ID [UPDATES]")
 	cmd.Require(mflag.Min, 1)
 	cmd.Require(mflag.Max, 2)
 	cmd.ParseFlags(args, false)
@@ -189,7 +222,7 @@ func (cli *ClientCli) CmdDeviceApprove(args ...string) error {
 }
 
 func (cli *ClientCli) CmdDeviceReject(args ...string) error {
-	cmd := cli.Subcmd("device:reject", "claim-id")
+	cmd := cli.Subcmd("device:reject", "CLAIM-ID")
 	cmd.Require(mflag.Exact, 1)
 	cmd.ParseFlags(args, false)
 
