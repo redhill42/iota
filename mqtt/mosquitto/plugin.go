@@ -1,14 +1,11 @@
-package main
-
-// #cgo darwin LDFLAGS: -Wl,-undefined -Wl,dynamic_lookup
-// #cgo !darwin LDFLAGS: -Wl,-unresolved-symbols=ignore-all
-import "C"
+package mosquitto
 
 import (
 	"encoding/base64"
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/redhill42/iota/auth"
 	"github.com/redhill42/iota/auth/userdb"
@@ -25,7 +22,6 @@ var devices *device.Manager
 
 const _SUPER_USER = "iota"
 
-//export AuthPluginInit
 func AuthPluginInit(keys []string, values []string, authOptsNum int) bool {
 	err := config.Initialize()
 	if err != nil {
@@ -51,7 +47,6 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) bool {
 	return true
 }
 
-//export AuthPluginCleanup
 func AuthPluginCleanup() {
 	if users != nil {
 		users.Close()
@@ -61,7 +56,6 @@ func AuthPluginCleanup() {
 	}
 }
 
-//export AuthUnpwdCheck
 func AuthUnpwdCheck(username, password, clientid string) bool {
 	var err error
 
@@ -108,7 +102,6 @@ var (
 	apiResponsePattern   = regexp.MustCompile("^([^/]+)/me/.+$")
 )
 
-//export AuthAclCheck
 func AuthAclCheck(clientid, username, topic string, acc int) bool {
 	// Super user has full access to all topics
 	if username == _SUPER_USER {
@@ -130,16 +123,36 @@ func AuthAclCheck(clientid, username, topic string, acc int) bool {
 		}
 	}
 
-	// authorized devices can publish request to "api/v1/%u/me/attributes/request" and
-	// subscribe response on "%u/me/attributes/response". It can also subscribe
-	// request on "%u/me/rpc/request" and publish response to "%u/me/rpc/response"
 	if _, err := devices.VerifyToken(username); err == nil {
+		// authorized device can publish request to api request topic, either
+		// for itself or other devices
 		if m := apiRequestPattern.FindStringSubmatch(topic); len(m) == 2 {
-			return acc == _MOSQ_ACL_WRITE && m[1] == username
+			if acc == _MOSQ_ACL_WRITE {
+				if m[1] == username {
+					return true
+				} else {
+					_, err = devices.VerifyToken(m[1])
+					return err == nil
+				}
+			}
+			return false
 		}
 
+		// device can subscribe api response topic for itself or other devices
 		if m := apiResponsePattern.FindStringSubmatch(topic); len(m) == 2 {
-			return m[1] == username
+			if m[1] == username {
+				return true
+			} else {
+				_, err = devices.VerifyToken(m[1])
+				return err == nil
+			}
+		}
+
+		// check for wildcard topics
+		if acc == _MOSQ_ACL_SUBSCRIBE {
+			if topic == "#" || strings.HasPrefix(topic, "api/") || strings.HasPrefix(topic, "+/") {
+				return false
+			}
 		}
 
 		// devices can communicate each other on any topics
@@ -149,5 +162,3 @@ func AuthAclCheck(clientid, username, topic string, acc int) bool {
 	// authorized users has full access on any topic
 	return true
 }
-
-func main() {}

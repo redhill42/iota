@@ -11,14 +11,13 @@ import (
 	"strings"
 
 	"github.com/eclipse/paho.mqtt.golang"
-	"github.com/gorilla/mux"
 	"github.com/redhill42/iota/config"
 	"github.com/sirupsen/logrus"
 )
 
 type Broker struct {
 	client mqtt.Client
-	mux    *mux.Router
+	mux    http.Handler
 	qos    byte
 	tokenQ chan mqtt.Token
 }
@@ -126,7 +125,7 @@ const apiTopic = "api/+/+/#"
 // for example, to get device attributes, device send an empty message to
 // "api/v1/XXX/me/attributes/request/1" and subscribe to "XXX/me/attributes/response/1"
 // to receive the result.
-func (broker *Broker) Forward(mux *mux.Router) error {
+func (broker *Broker) Forward(mux http.Handler) error {
 	if broker.mux != nil {
 		panic("MQTT broker already forwarded")
 	}
