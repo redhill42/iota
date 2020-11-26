@@ -2,20 +2,23 @@ package device
 
 import (
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
 	"github.com/redhill42/iota/api/types"
+	"github.com/redhill42/iota/config"
 	"github.com/redhill42/iota/mqtt"
 )
 
 type Manager struct {
 	*deviceDB
-	publisher *mqtt.Broker
-	secret    []byte
-	claims    *sync.Map
+	publisher   *mqtt.Broker
+	secret      []byte
+	claims      *sync.Map
+	autoapprove bool
 }
 
 func NewManager(publisher *mqtt.Broker) (*Manager, error) {
@@ -29,7 +32,8 @@ func NewManager(publisher *mqtt.Broker) (*Manager, error) {
 		return nil, err
 	}
 
-	return &Manager{db, publisher, secret, new(sync.Map)}, nil
+	autoapprove, _ := strconv.ParseBool(config.GetOrDefault("device.autoapprove", "false"))
+	return &Manager{db, publisher, secret, new(sync.Map), autoapprove}, nil
 }
 
 // CreateToken create an access token for the device. The access token
@@ -94,6 +98,10 @@ func (mgr *Manager) Claim(claimId string, attributes Record) error {
 
 	if _, loaded := mgr.claims.Load(claimId); loaded {
 		return DuplicateClaimError(claimId)
+	}
+	if mgr.autoapprove {
+		_, err := mgr.internalApprove(claimId, attributes)
+		return err
 	} else {
 		mgr.claims.Store(claimId, attributes)
 		return nil
@@ -125,6 +133,10 @@ func (mgr *Manager) Approve(claimId string, updates Record) (token string, err e
 		}
 	}
 
+	return mgr.internalApprove(claimId, attributes)
+}
+
+func (mgr *Manager) internalApprove(claimId string, attributes Record) (token string, err error) {
 	// By default, the device id is set to claim id, but the approver can change
 	// it by setting the "id" attribute.
 	var id = claimId
