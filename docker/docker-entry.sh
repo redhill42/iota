@@ -9,7 +9,9 @@ gosu influxdb /app/bin/influxd \
     --engine-path=/data/influxdb/engine \
     --bolt-path=/data/influxdb/influxd.bolt \
     2>&1 >/var/log/influxd/influxd.log &
-sleep 15
+
+# wait for influxdb started
+timeout 30 bash -c 'until printf "" 2>>/dev/null >>/dev/tcp/$0/$1; do echo -n "."; sleep 1; done' localhost 8086
 
 # one time setup for influxdb
 if ! [ -e $INFLUX_CONFIGS_PATH ]; then
