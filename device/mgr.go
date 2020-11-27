@@ -1,13 +1,17 @@
 package device
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
+	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/api/types"
 	"github.com/redhill42/iota/config"
 	"github.com/redhill42/iota/mqtt"
@@ -15,13 +19,15 @@ import (
 
 type Manager struct {
 	*deviceDB
-	publisher   *mqtt.Broker
-	secret      []byte
-	claims      *sync.Map
-	autoapprove bool
+	broker       *mqtt.Broker
+	secret       []byte
+	claims       *sync.Map
+	autoapprove  bool
+	rpcTimeout   time.Duration
+	rpcRequestId int64
 }
 
-func NewManager(publisher *mqtt.Broker) (*Manager, error) {
+func NewManager(broker *mqtt.Broker) (*Manager, error) {
 	db, err := openDatabase()
 	if err != nil {
 		return nil, err
@@ -33,7 +39,17 @@ func NewManager(publisher *mqtt.Broker) (*Manager, error) {
 	}
 
 	autoapprove, _ := strconv.ParseBool(config.GetOrDefault("device.autoapprove", "false"))
-	return &Manager{db, publisher, secret, new(sync.Map), autoapprove}, nil
+	rpcTimeout, _ := strconv.ParseInt(config.GetOrDefault("device.rpcTimeout", "5"), 10, 0)
+
+	return &Manager{
+		deviceDB:     db,
+		broker:       broker,
+		secret:       secret,
+		claims:       new(sync.Map),
+		autoapprove:  autoapprove,
+		rpcTimeout:   time.Duration(rpcTimeout) * time.Second,
+		rpcRequestId: time.Now().Unix(),
+	}, nil
 }
 
 // CreateToken create an access token for the device. The access token
@@ -71,25 +87,103 @@ func (mgr *Manager) Update(id string, updates Record) error {
 	}
 
 	// Publish device attribute updates to device
-	if len(updates) != 0 && mgr.publisher != nil {
+	if len(updates) != 0 && mgr.broker != nil {
 		token, err := mgr.GetToken(id)
 		if err != nil {
 			return err
 		}
 		updates["id"] = id
-		return mgr.publisher.Publish(token+"/me/attributes", updates)
+		return mgr.broker.Publish(token+"/me/attributes", updates)
 	}
 
 	return nil
 }
 
-func (mgr *Manager) RPC(id, requestId string, req interface{}) error {
+type RPCRequest struct {
+	Version string      `json:"jsonrpc,omitempty"`
+	Method  string      `json:"method"`
+	Params  interface{} `json:"params,omitempty"`
+	Id      interface{} `json:"id,omitempty"`
+}
+
+// isBatch returns true when the first non-whitespace character is '['
+func isBatch(raw []byte) bool {
+	for _, c := range raw {
+		// skip insignificant whitespace
+		if c == 0x20 || c == 0x09 || c == 0xa || c == 0x0d {
+			continue
+		}
+		return c == '['
+	}
+	return false
+}
+
+// parseRPCRequest parse raw message. Returns true if the request
+// needs response, false otherwise.
+func parseRPCRequest(raw []byte) (bool, error) {
+	if isBatch(raw) {
+		dec := json.NewDecoder(bytes.NewReader(raw))
+		if _, err := dec.Token(); err != nil { // skip  '['
+			return false, err
+		}
+		for dec.More() {
+			var msg RPCRequest
+			if err := dec.Decode(&msg); err != nil {
+				return false, err
+			}
+			if msg.Id != nil {
+				return true, nil
+			}
+		}
+		return false, nil
+	} else {
+		var msg RPCRequest
+		err := json.Unmarshal(raw, &msg)
+		return msg.Id != nil, err
+	}
+}
+
+func (mgr *Manager) RPC(id string, req []byte) ([]byte, error) {
+	needResponse, err := parseRPCRequest(req)
+	if err != nil {
+		return nil, httputils.NewStatusError(http.StatusBadRequest, err)
+	}
+
 	token, err := mgr.GetToken(id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	topic := token + "/me/rpc/request/" + requestId
-	return mgr.publisher.Publish(topic, req)
+
+	requestId := strconv.FormatInt(atomic.AddInt64(&mgr.rpcRequestId, 1), 10)
+	requestTopic := token + "/me/rpc/request/" + requestId
+	responseTopic := token + "/me/rpc/response/" + requestId
+
+	if !needResponse || mgr.rpcTimeout <= 0 {
+		return nil, mgr.broker.Publish(requestTopic, req)
+	}
+
+	// Subscribe on response
+	respCh := make(chan []byte)
+	err = mgr.broker.Subscribe(responseTopic, func(topic string, message []byte) {
+		respCh <- message
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer mgr.broker.Unsubscribe(responseTopic)
+
+	// Send request to device
+	if err = mgr.broker.Publish(requestTopic, req); err != nil {
+		return nil, err
+	}
+
+	// Receive response or time out
+	select {
+	case <-time.After(mgr.rpcTimeout):
+		return nil, RPCTimeoutError(id)
+	case msg := <-respCh:
+		return msg, nil
+	}
 }
 
 func (mgr *Manager) Claim(claimId string, attributes Record) error {
@@ -164,16 +258,16 @@ func (mgr *Manager) internalApprove(claimId string, attributes Record) (token st
 	// Publish device claim approved message
 	topic := "me/claim/" + claimId
 	if err == nil {
-		err = mgr.publisher.Publish(topic, types.Token{Token: token})
+		err = mgr.broker.Publish(topic, types.Token{Token: token})
 	} else {
-		_ = mgr.publisher.Publish(topic, map[string]interface{}{"error": err})
+		_ = mgr.broker.Publish(topic, map[string]interface{}{"error": err})
 	}
 	return
 }
 
 func (mgr *Manager) Reject(claimId string) error {
 	if _, loaded := mgr.claims.LoadAndDelete(claimId); loaded {
-		return mgr.publisher.Publish("me/claim/"+claimId, map[string]string{"error": "Rejected"})
+		return mgr.broker.Publish("me/claim/"+claimId, map[string]string{"error": "Rejected"})
 	} else {
 		return ClaimNotFoundError(claimId)
 	}

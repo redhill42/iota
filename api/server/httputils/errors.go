@@ -90,7 +90,7 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	statusCode := GetHTTPErrorStatusCode(err)
 	serverError := fmt.Sprintf("Handler for %s %s returned error: %v", r.Method, r.URL.Path, err)
 
-	if statusCode >= 500 {
+	if statusCode == http.StatusInternalServerError {
 		logrus.Error(serverError)
 		http.Error(w, "Internal server error", statusCode)
 	} else {

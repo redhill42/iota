@@ -70,6 +70,19 @@ func (broker *Broker) configure(username, password string) *mqtt.ClientOptions {
 	return opts
 }
 
+func (broker *Broker) drainTokenQ() {
+	for {
+		t, more := <-broker.tokenQ
+		if !more || t == nil {
+			break
+		}
+		_ = t.Wait()
+		if t.Error() != nil {
+			logrus.WithError(t.Error()).Error("Failed to publish message")
+		}
+	}
+}
+
 func (broker *Broker) Publish(topic string, payload interface{}) (err error) {
 	switch payload.(type) {
 	case string, []byte, bytes.Buffer:
@@ -84,17 +97,16 @@ func (broker *Broker) Publish(topic string, payload interface{}) (err error) {
 	return nil
 }
 
-func (broker *Broker) drainTokenQ() {
-	for {
-		t, more := <-broker.tokenQ
-		if !more || t == nil {
-			break
-		}
-		_ = t.Wait()
-		if t.Error() != nil {
-			logrus.WithError(t.Error()).Error("Failed to publish message")
-		}
-	}
+func (broker *Broker) Subscribe(topic string, callback func(string, []byte)) error {
+	t := broker.client.Subscribe(topic, broker.qos, func(client mqtt.Client, msg mqtt.Message) {
+		callback(msg.Topic(), msg.Payload())
+	})
+	t.Wait()
+	return t.Error()
+}
+
+func (broker *Broker) Unsubscribe(topic string) {
+	broker.tokenQ <- broker.client.Unsubscribe(topic)
 }
 
 func (broker *Broker) Close() {

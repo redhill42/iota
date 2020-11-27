@@ -63,9 +63,8 @@ func (api *APIClient) DeleteDevice(ctx context.Context, id string) error {
 	return err
 }
 
-func (api *APIClient) RPC(ctx context.Context, id, requestId string, request interface{}) error {
-	query := url.Values{"requestId": []string{requestId}}
-	resp, err := api.Post(ctx, "/devices/"+id+"/rpc", query, request, nil)
+func (api *APIClient) RPC(ctx context.Context, id string, request interface{}) error {
+	resp, err := api.Post(ctx, "/devices/"+id+"/rpc", nil, request, nil)
 	if err == nil {
 		resp.EnsureClosed()
 	}

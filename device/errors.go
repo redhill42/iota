@@ -17,6 +17,9 @@ type DeviceNotFoundError string
 // when creating a new device.
 type InvalidDeviceIdError string
 
+// RPCTimeoutError indicates that an RPC call has been timed out.
+type RPCTimeoutError string
+
 func (e DuplicateDeviceError) Error() string {
 	return fmt.Sprintf("Device already exists: %s", string(e))
 }
@@ -45,6 +48,14 @@ var validDeviceIdPattern = regexp.MustCompile("^[a-zA-Z0-9_.@-]+$")
 
 func validateDeviceId(id string) bool {
 	return validDeviceIdPattern.MatchString(id)
+}
+
+func (e RPCTimeoutError) Error() string {
+	return "Device RPC has no responding"
+}
+
+func (e RPCTimeoutError) HTTPErrorStatusCode() int {
+	return http.StatusServiceUnavailable
 }
 
 // The DuplicateClaimError indicates that a device claiming is already exists.

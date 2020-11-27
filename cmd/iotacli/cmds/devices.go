@@ -131,11 +131,8 @@ func (cli *ClientCli) CmdDeviceDelete(args ...string) error {
 }
 
 func (cli *ClientCli) CmdDeviceRPC(args ...string) error {
-	var requestId string
-
-	cmd := cli.Subcmd("device:rpc", "[OPTIONS] ID METHOD [PARAMETER=VALUE...]")
+	cmd := cli.Subcmd("device:rpc", "ID METHOD [PARAMETER=VALUE...]")
 	cmd.Require(mflag.Min, 2)
-	cmd.StringVar(&requestId, []string{"i"}, "0", "Request identifier")
 	cmd.ParseFlags(args, true)
 
 	params := make(map[string]interface{})
@@ -150,15 +147,15 @@ func (cli *ClientCli) CmdDeviceRPC(args ...string) error {
 
 	id := cmd.Arg(0)
 	req := map[string]interface{}{
-		"id":     0,
-		"method": cmd.Arg(1),
-		"param":  params,
+		"jsonrpc": "2.0",
+		"method":  cmd.Arg(1),
+		"params":  params,
 	}
 
 	if err := cli.ConnectAndLogin(); err != nil {
 		return err
 	}
-	return cli.RPC(context.Background(), id, requestId, req)
+	return cli.RPC(context.Background(), id, req)
 }
 
 func convert(value string) interface{} {

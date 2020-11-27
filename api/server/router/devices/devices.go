@@ -126,13 +126,16 @@ func (dr *devicesRouter) rpc(w http.ResponseWriter, r *http.Request, vars map[st
 		return err
 	}
 
-	err = dr.DeviceManager.RPC(vars["id"], r.FormValue("requestId"), req)
-	if err != nil {
+	resp, err := dr.DeviceManager.RPC(vars["id"], req)
+	switch {
+	case err != nil:
 		return err
-	} else {
+	case resp == nil:
 		w.WriteHeader(http.StatusNoContent)
-		return nil
+	default:
+		_, err = w.Write(resp)
 	}
+	return err
 }
 
 func (dr *devicesRouter) measurement(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
