@@ -79,12 +79,18 @@ func (db *deviceDB) do(f func(c *mgo.Collection) error) error {
 }
 
 func (db *deviceDB) Create(id, token string, attributes Record) error {
-	return db.do(func(c *mgo.Collection) error {
-		delete(attributes, "id")
-		delete(attributes, "token")
-		attributes["_id"] = id
-		attributes["_token"] = token
+	if !validateDeviceId(id) {
+		return InvalidDeviceIdError(id)
+	}
+	if attributes == nil {
+		attributes = make(Record)
+	}
+	delete(attributes, "id")
+	delete(attributes, "token")
+	attributes["_id"] = id
+	attributes["_token"] = token
 
+	return db.do(func(c *mgo.Collection) error {
 		err := c.Insert(attributes)
 		if mgo.IsDup(err) {
 			err = DuplicateDeviceError(id)
@@ -152,15 +158,15 @@ func (db *deviceDB) GetToken(id string) (string, error) {
 }
 
 func (db *deviceDB) Update(id string, fields Record) error {
-	return db.do(func(c *mgo.Collection) (err error) {
-		delete(fields, "_id")
-		delete(fields, "id")
-		delete(fields, "_token")
-		delete(fields, "token")
-		if len(fields) == 0 {
-			return nil
-		}
+	delete(fields, "_id")
+	delete(fields, "id")
+	delete(fields, "_token")
+	delete(fields, "token")
+	if len(fields) == 0 {
+		return nil
+	}
 
+	return db.do(func(c *mgo.Collection) (err error) {
 		var remove []string
 		for k, v := range fields {
 			if v == nil {
@@ -184,12 +190,18 @@ func (db *deviceDB) Update(id string, fields Record) error {
 }
 
 func (db *deviceDB) Upsert(id, token string, fields Record) error {
-	return db.do(func(c *mgo.Collection) error {
-		delete(fields, "id")
-		delete(fields, "_id")
-		delete(fields, "token")
-		fields["_token"] = token
+	if !validDeviceIdPattern.MatchString(id) {
+		return InvalidDeviceIdError(id)
+	}
+	if fields == nil {
+		fields = make(Record)
+	}
+	delete(fields, "id")
+	delete(fields, "_id")
+	delete(fields, "token")
+	fields["_token"] = token
 
+	return db.do(func(c *mgo.Collection) error {
 		_, err := c.UpsertId(id, bson.M{"$set": fields})
 		return err
 	})

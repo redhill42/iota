@@ -3,14 +3,19 @@ package device
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 )
 
-// The DuplicateDeviceError indicates that a device already exists in the database
+// DuplicateDeviceError indicates that a device already exists in the database
 // when creating device.
 type DuplicateDeviceError string
 
-// The DeviceNotFoundError indicates that a device not found in the database.
+// DeviceNotFoundError indicates that a device not found in the database.
 type DeviceNotFoundError string
+
+// InvalidDeviceIdError indicates that an invalid device id is provided
+// when creating a new device.
+type InvalidDeviceIdError string
 
 func (e DuplicateDeviceError) Error() string {
 	return fmt.Sprintf("Device already exists: %s", string(e))
@@ -26,6 +31,20 @@ func (e DeviceNotFoundError) Error() string {
 
 func (e DeviceNotFoundError) HTTPErrorStatusCode() int {
 	return http.StatusNotFound
+}
+
+func (e InvalidDeviceIdError) Error() string {
+	return "Invalid device id"
+}
+
+func (e InvalidDeviceIdError) HTTPErrorStatusCode() int {
+	return http.StatusBadRequest
+}
+
+var validDeviceIdPattern = regexp.MustCompile("^[a-zA-Z0-9_.@-]+$")
+
+func validateDeviceId(id string) bool {
+	return validDeviceIdPattern.MatchString(id)
 }
 
 // The DuplicateClaimError indicates that a device claiming is already exists.

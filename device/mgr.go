@@ -71,7 +71,7 @@ func (mgr *Manager) Update(id string, updates Record) error {
 	}
 
 	// Publish device attribute updates to device
-	if mgr.publisher != nil {
+	if len(updates) != 0 && mgr.publisher != nil {
 		token, err := mgr.GetToken(id)
 		if err != nil {
 			return err
@@ -93,6 +93,12 @@ func (mgr *Manager) RPC(id, requestId string, req interface{}) error {
 }
 
 func (mgr *Manager) Claim(claimId string, attributes Record) error {
+	if !validateDeviceId(claimId) {
+		return InvalidDeviceIdError(claimId)
+	}
+	if attributes == nil {
+		attributes = make(Record)
+	}
 	attributes["claim-id"] = claimId
 	attributes["claim-time"] = time.Now()
 

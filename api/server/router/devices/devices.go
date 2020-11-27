@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"github.com/redhill42/iota/agent"
@@ -74,9 +73,6 @@ func (dr *devicesRouter) create(w http.ResponseWriter, r *http.Request, vars map
 	if id, ok = req["id"].(string); !ok {
 		return httputils.NewStatusError(http.StatusBadRequest, errors.New("Missing \"id\" attribute"))
 	}
-	if !validateDeviceId(id) {
-		return httputils.NewStatusError(http.StatusBadRequest, errors.New("Invalid device id"))
-	}
 	if token, err = dr.DeviceManager.CreateToken(id); err != nil {
 		return err
 	}
@@ -85,12 +81,6 @@ func (dr *devicesRouter) create(w http.ResponseWriter, r *http.Request, vars map
 	}
 	w.Header().Set("Location", r.RequestURI+"/"+id)
 	return httputils.WriteJSON(w, http.StatusCreated, types.Token{Token: token})
-}
-
-var validDeviceIdPattern = regexp.MustCompile("^[a-zA-Z0-9_.@-]+$")
-
-func validateDeviceId(id string) bool {
-	return validDeviceIdPattern.MatchString(id)
 }
 
 func (dr *devicesRouter) read(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
@@ -174,9 +164,6 @@ func (dr *devicesRouter) claim(w http.ResponseWriter, r *http.Request, vars map[
 	}
 	if id, ok = req["claim-id"].(string); !ok {
 		return httputils.NewStatusError(http.StatusBadRequest, errors.New("Missing \"claim-id\" attribute"))
-	}
-	if !validateDeviceId(id) {
-		return httputils.NewStatusError(http.StatusBadRequest, errors.New("Invalid device id"))
 	}
 	if err = dr.DeviceManager.Claim(id, req); err != nil {
 		return err
