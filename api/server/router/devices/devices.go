@@ -19,10 +19,17 @@ const claimPath = "/claims/{id:[^/]+}"
 type devicesRouter struct {
 	*agent.Agent
 	routes []router.Route
+	hub    *Hub
 }
 
 func NewRouter(agent *agent.Agent) router.Router {
-	r := &devicesRouter{Agent: agent}
+	h := newHub()
+	go h.run()
+	agent.DeviceManager.OnUpdate(func(rec device.Record) {
+		h.updates <- rec
+	})
+
+	r := &devicesRouter{Agent: agent, hub: h}
 	r.routes = []router.Route{
 		router.NewGetRoute("/devices", r.list),
 		router.NewPostRoute("/devices", r.create),
@@ -30,6 +37,8 @@ func NewRouter(agent *agent.Agent) router.Router {
 		router.NewPutRoute(devicePath, r.update),
 		router.NewDeleteRoute(devicePath, r.delete),
 		router.NewPostRoute(devicePath+"/rpc", r.rpc),
+
+		router.NewGetRoute(devicePath+"/subscribe", r.subscribe),
 
 		router.NewGetRoute("/claims", r.getClaims),
 		router.NewPostRoute(claimPath+"/approve", r.approve),
@@ -136,6 +145,10 @@ func (dr *devicesRouter) rpc(w http.ResponseWriter, r *http.Request, vars map[st
 		_, err = w.Write(resp)
 	}
 	return err
+}
+
+func (dr *devicesRouter) subscribe(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	return dr.hub.serveWs(w, r, vars["id"])
 }
 
 func (dr *devicesRouter) measurement(w http.ResponseWriter, r *http.Request, vars map[string]string) error {

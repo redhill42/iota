@@ -17,14 +17,17 @@ import (
 	"github.com/redhill42/iota/mqtt"
 )
 
+type UpdateCallback func(updates Record)
+
 type Manager struct {
 	*deviceDB
-	broker       *mqtt.Broker
-	secret       []byte
-	claims       *sync.Map
-	autoapprove  bool
-	rpcTimeout   time.Duration
-	rpcRequestId int64
+	broker          *mqtt.Broker
+	secret          []byte
+	updateCallbacks []UpdateCallback
+	claims          *sync.Map
+	autoapprove     bool
+	rpcTimeout      time.Duration
+	rpcRequestId    int64
 }
 
 func NewManager(broker *mqtt.Broker) (*Manager, error) {
@@ -86,17 +89,31 @@ func (mgr *Manager) Update(id string, updates Record) error {
 		return err
 	}
 
+	if len(updates) == 0 {
+		return nil
+	} else {
+		updates["id"] = id
+	}
+
+	// Invoke update callbacks
+	for _, cb := range mgr.updateCallbacks {
+		cb(updates)
+	}
+
 	// Publish device attribute updates to device
-	if len(updates) != 0 && mgr.broker != nil {
+	if mgr.broker != nil {
 		token, err := mgr.GetToken(id)
 		if err != nil {
 			return err
 		}
-		updates["id"] = id
 		return mgr.broker.Publish(token+"/me/attributes", updates)
 	}
 
 	return nil
+}
+
+func (mgr *Manager) OnUpdate(callback UpdateCallback) {
+	mgr.updateCallbacks = append(mgr.updateCallbacks, callback)
 }
 
 type RPCRequest struct {
