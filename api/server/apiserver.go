@@ -4,7 +4,7 @@ import (
 	"github.com/redhill42/iota/agent"
 	"github.com/redhill42/iota/api/server/middleware"
 	"github.com/redhill42/iota/api/server/router/devices"
-	"github.com/redhill42/iota/api/server/router/rpc"
+	"github.com/redhill42/iota/api/server/router/jsonrpc"
 	"github.com/redhill42/iota/api/server/router/system"
 )
 
@@ -20,7 +20,7 @@ func NewAPIServer(agent *agent.Agent) (api *Server, err error) {
 	// Initialize routers
 	api.InitRouter(
 		system.NewRouter(agent),
-		rpc.NewRouter(agent),
+		jsonrpc.NewRouter(agent),
 		devices.NewRouter(agent),
 	)
 

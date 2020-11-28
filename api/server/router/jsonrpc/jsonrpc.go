@@ -1,23 +1,24 @@
-package rpc
+package jsonrpc
 
 import (
-	rpcserver "github.com/gorilla/rpc/v2"
-	"github.com/gorilla/rpc/v2/json2"
 	"net/http"
 
 	"github.com/redhill42/iota/agent"
 	"github.com/redhill42/iota/api/server/router"
+	"github.com/redhill42/iota/pkg/rpc"
 )
 
 type rpcRouter struct {
-	s      *rpcserver.Server
+	s      *rpc.Server
 	routes []router.Route
 }
 
 func NewRouter(ag *agent.Agent) router.Router {
-	s := rpcserver.NewServer()
-	s.RegisterCodec(json2.NewCodec(), "application/json")
-	s.RegisterService(newDeviceService(ag), "device")
+	s := rpc.NewServer()
+	err := s.RegisterName("device", newDeviceService(ag))
+	if err != nil {
+		panic(err)
+	}
 
 	r := &rpcRouter{s: s}
 	r.routes = []router.Route{
