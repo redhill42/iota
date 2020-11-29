@@ -1,7 +1,6 @@
 package devices
 
 import (
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -80,7 +79,8 @@ func (dr *devicesRouter) create(w http.ResponseWriter, r *http.Request, vars map
 		return err
 	}
 	if id, ok = req["id"].(string); !ok {
-		return httputils.NewStatusError(http.StatusBadRequest, errors.New("Missing \"id\" attribute"))
+		http.Error(w, "Missing \"id\" attribute", http.StatusBadRequest)
+		return nil
 	}
 	if token, err = dr.DeviceManager.CreateToken(id); err != nil {
 		return err
@@ -179,7 +179,8 @@ func (dr *devicesRouter) claim(w http.ResponseWriter, r *http.Request, vars map[
 		return err
 	}
 	if id, ok = req["claim-id"].(string); !ok {
-		return httputils.NewStatusError(http.StatusBadRequest, errors.New("Missing \"claim-id\" attribute"))
+		http.Error(w, "Missing \"claim-id\" attributes", http.StatusBadRequest)
+		return nil
 	}
 	if err = dr.DeviceManager.Claim(id, req); err != nil {
 		return err
