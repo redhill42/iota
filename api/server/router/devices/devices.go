@@ -135,7 +135,7 @@ func (dr *devicesRouter) rpc(w http.ResponseWriter, r *http.Request, vars map[st
 		return err
 	}
 
-	resp, err := dr.DeviceManager.RPC(vars["id"], req)
+	resp, err := dr.DeviceManager.RPC(r.Context(), vars["id"], req)
 	switch {
 	case err != nil:
 		return err

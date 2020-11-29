@@ -2,7 +2,9 @@ package device
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"sync"
@@ -15,6 +17,7 @@ import (
 	"github.com/redhill42/iota/api/types"
 	"github.com/redhill42/iota/config"
 	"github.com/redhill42/iota/mqtt"
+	"github.com/sirupsen/logrus"
 )
 
 type UpdateCallback func(updates Record)
@@ -160,7 +163,7 @@ func parseRPCRequest(raw []byte) (bool, error) {
 	}
 }
 
-func (mgr *Manager) RPC(id string, req []byte) ([]byte, error) {
+func (mgr *Manager) RPC(ctx context.Context, id string, req []byte) ([]byte, error) {
 	needResponse, err := parseRPCRequest(req)
 	if err != nil {
 		return nil, httputils.NewStatusError(http.StatusBadRequest, err)
@@ -194,10 +197,13 @@ func (mgr *Manager) RPC(id string, req []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Receive response or time out
+	// Receive response or cancelled
+	ctx, cancel := context.WithTimeout(ctx, mgr.rpcTimeout)
+	defer cancel()
 	select {
-	case <-time.After(mgr.rpcTimeout):
-		return nil, RPCTimeoutError(id)
+	case <-ctx.Done():
+		logrus.Debug(ctx.Err())
+		return nil, httputils.NewStatusError(http.StatusServiceUnavailable, errors.New("RPC time out"))
 	case msg := <-respCh:
 		return msg, nil
 	}

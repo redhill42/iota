@@ -1,9 +1,6 @@
 package router
 
 import (
-	"context"
-	"net/http"
-
 	"github.com/redhill42/iota/api/server/httputils"
 )
 
@@ -62,34 +59,4 @@ func NewOptionsRoute(path string, handler httputils.APIFunc) Route {
 // NewHeadRoute initializes a new route with the http method HEAD.
 func NewHeadRoute(path string, handler httputils.APIFunc) Route {
 	return NewRoute("HEAD", path, handler)
-}
-
-func cancellableHandler(h httputils.APIFunc) httputils.APIFunc {
-	return func(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-		if notifier, ok := w.(http.CloseNotifier); ok {
-			notify := notifier.CloseNotify()
-			notifyCtx, cancel := context.WithCancel(r.Context())
-			finished := make(chan struct{})
-			defer close(finished)
-			r = r.WithContext(notifyCtx)
-			go func() {
-				select {
-				case <-notify:
-					cancel()
-				case <-finished:
-				}
-			}()
-		}
-		return h(w, r, vars)
-	}
-}
-
-// Cancellable makes new route which embeds http.CloseNotifier feature to
-// context.Context of handler.
-func Cancellable(r Route) Route {
-	return localRoute{
-		method:  r.Method(),
-		path:    r.Path(),
-		handler: cancellableHandler(r.Handler()),
-	}
 }
