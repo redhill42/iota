@@ -1,8 +1,6 @@
 package agent
 
 import (
-	"encoding/base64"
-
 	"github.com/redhill42/iota/auth"
 	"github.com/redhill42/iota/auth/userdb"
 	"github.com/redhill42/iota/config"
@@ -40,12 +38,12 @@ func New() (agent *Agent, err error) {
 	var username = config.GetOption("mqtt", "user")
 	var password = config.GetOption("mqtt", "password")
 	if username == "" && password == "" {
-		secret, err := agent.Users.GetSecret()
+		pw, err := agent.Users.GetPassword("mqtt", 32)
 		if err != nil {
 			return nil, err
 		}
 		username = "iota"
-		password = base64.StdEncoding.EncodeToString(secret)
+		password = string(pw)
 	}
 	agent.MQTTBroker, err = mqtt.NewBroker(username, password)
 	if err != nil {

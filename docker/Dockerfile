@@ -25,10 +25,9 @@ RUN apt-get clean && apt-get update && apt-get install -y --no-install-recommend
     && rm -rf /var/lib/apt/lists/*
 
 # Setup mosquitto env.
-RUN mkdir -p /var/lib/mosquitto /var/log/mosquitto \
-    && groupadd -r mosquitto \
-    && useradd -r -g mosquitto mosquitto \
-    && chown -R mosquitto:mosquitto /var/lib/mosquitto \
+RUN groupadd -r mosquitto && useradd -r -g mosquitto mosquitto \
+    && mkdir -p /data/mosquitto /var/log/mosquitto \
+    && chown -R mosquitto:mosquitto /data/mosquitto \
     && chown -R mosquitto:mosquitto /var/log/mosquitto
 
 # grab gosu for easy step-down from root

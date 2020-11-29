@@ -87,15 +87,17 @@ func (db *fileDB) Update(name string, fields interface{}) error {
 	return userdb.Unsupported{}
 }
 
-func (db *fileDB) GetSecret(key string, gen func() []byte) ([]byte, error) {
+func (db *fileDB) GetSecret(key string, gen func() ([]byte, error)) ([]byte, error) {
 	secret := db.GetOption("secrets", key)
 	if secret != "" {
 		return base64.StdEncoding.DecodeString(secret)
 	}
 
-	newSecret := gen()
-	db.AddOption("secrets", key, base64.StdEncoding.EncodeToString(newSecret))
-	err := db.Save()
+	newSecret, err := gen()
+	if err == nil {
+		db.AddOption("secrets", key, base64.StdEncoding.EncodeToString(newSecret))
+		err = db.Save()
+	}
 	return newSecret, err
 }
 

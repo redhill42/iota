@@ -34,7 +34,7 @@ type Plugin interface {
 	// GetSecret returns a secret key used to sign the JWT token. If the
 	// secret key does not exist in the database, a new key is generated
 	// and saved to the database.
-	GetSecret(key string, gen func() []byte) ([]byte, error)
+	GetSecret(key string, gen func() ([]byte, error)) ([]byte, error)
 
 	// Close the user database.
 	Close()
@@ -218,11 +218,36 @@ func (db *UserDatabase) ChangePassword(name string, oldPassword, newPassword str
 // GetSecret returns a secret key used to sign the JWT token. If the
 // secret key does not exist in the database, a new key is generated
 // and saved to the database.
-func (db *UserDatabase) GetSecret() ([]byte, error) {
-	return db.plugin.GetSecret("jwt", func() []byte {
+func (db *UserDatabase) GetSecret(key string) ([]byte, error) {
+	return db.plugin.GetSecret(key, func() ([]byte, error) {
 		secret := make([]byte, 64)
-		rand.Read(secret)
-		return secret
+		_, err := rand.Read(secret)
+		return secret, err
+	})
+}
+
+// GetPassword returns a human readable password. If the password does
+// not exist in the database, a new password is generated and saved
+// to the database.
+func (db *UserDatabase) GetPassword(key string, len int) ([]byte, error) {
+	return db.plugin.GetSecret(key, func() ([]byte, error) {
+		pw := make([]byte, len)
+		b := make([]byte, 128)
+		count := 0
+		for count < len {
+			n, err := rand.Read(b)
+			if err != nil {
+				return nil, err
+			}
+			for i := 0; i < n && count < len; i++ {
+				c := b[i]
+				if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' {
+					pw[count] = c
+					count++
+				}
+			}
+		}
+		return pw, nil
 	})
 }
 

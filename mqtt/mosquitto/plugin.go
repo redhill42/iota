@@ -1,7 +1,6 @@
 package mosquitto
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"regexp"
@@ -20,7 +19,9 @@ var users *userdb.UserDatabase
 var authz *auth.Authenticator
 var devices *device.Manager
 
-const _SUPER_USER = "iota"
+const superUser = "iota"
+
+var superUserPw string
 
 func AuthPluginInit(keys []string, values []string, authOptsNum int) bool {
 	err := config.Initialize()
@@ -33,6 +34,13 @@ func AuthPluginInit(keys []string, values []string, authOptsNum int) bool {
 		fmt.Fprintf(os.Stderr, "go-auth: cannot open user database: %v\n", err)
 		return false
 	}
+
+	password, err := users.GetPassword("mqtt", 32)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "go-auth: user database error: %v\n", err)
+		return false
+	}
+	superUserPw = string(password)
 
 	if authz, err = auth.NewAuthenticator(users); err != nil {
 		fmt.Fprintf(os.Stderr, "go-auth: cannot initialize authenticator")
@@ -60,9 +68,8 @@ func AuthUnpwdCheck(username, password, clientid string) bool {
 	var err error
 
 	// super user has full access to all topic
-	if username == _SUPER_USER {
-		secret := authz.GetSecret()
-		return password == base64.StdEncoding.EncodeToString(secret)
+	if username == superUser {
+		return password == superUserPw
 	}
 
 	// anonymous devices can login to claim itself
@@ -104,7 +111,7 @@ var (
 
 func AuthAclCheck(clientid, username, topic string, acc int) bool {
 	// Super user has full access to all topics
-	if username == _SUPER_USER {
+	if username == superUser {
 		return true
 	}
 
@@ -114,7 +121,6 @@ func AuthAclCheck(clientid, username, topic string, acc int) bool {
 		if clientid == "" {
 			return false
 		}
-
 		if acc == _MOSQ_ACL_WRITE {
 			return claimRequestPattern.MatchString(topic)
 		} else {

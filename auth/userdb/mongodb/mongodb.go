@@ -101,7 +101,7 @@ func (db *mongodb) Update(name string, fields interface{}) error {
 	})
 }
 
-func (db *mongodb) GetSecret(key string, gen func() []byte) ([]byte, error) {
+func (db *mongodb) GetSecret(key string, gen func() ([]byte, error)) ([]byte, error) {
 	session := db.session.Copy()
 	c := session.DB("").C("secret")
 	defer session.Close()
@@ -113,9 +113,10 @@ func (db *mongodb) GetSecret(key string, gen func() []byte) ([]byte, error) {
 
 	err := c.FindId(key).One(&record)
 	if err == mgo.ErrNotFound {
-		record.Key = key
-		record.Secret = gen()
-		err = c.Insert(&record)
+		if record.Secret, err = gen(); err == nil {
+			record.Key = key
+			err = c.Insert(&record)
+		}
 	}
 	return record.Secret, err
 }

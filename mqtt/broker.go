@@ -15,6 +15,21 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type Logger logrus.Level
+
+func (l Logger) Println(v ...interface{}) {
+	logrus.StandardLogger().Logln(logrus.Level(l), v...)
+}
+
+func (l Logger) Printf(format string, v ...interface{}) {
+	logrus.StandardLogger().Logf(logrus.Level(l), format, v...)
+}
+
+func init() {
+	mqtt.ERROR = Logger(logrus.ErrorLevel)
+	mqtt.CRITICAL = Logger(logrus.FatalLevel)
+}
+
 type Broker struct {
 	client mqtt.Client
 	mux    http.Handler
@@ -25,11 +40,7 @@ type Broker struct {
 func NewBroker(username, password string) (*Broker, error) {
 	broker := new(Broker)
 	opts := broker.configure(username, password)
-
 	broker.client = mqtt.NewClient(opts)
-	if t := broker.client.Connect(); t.Wait() && t.Error() != nil {
-		return nil, t.Error()
-	}
 
 	broker.tokenQ = make(chan mqtt.Token, 100)
 	go broker.drainTokenQ()
@@ -37,26 +48,25 @@ func NewBroker(username, password string) (*Broker, error) {
 }
 
 func (broker *Broker) configure(username, password string) *mqtt.ClientOptions {
-	server := config.GetOption("mqtt", "url")
-	if server == "" {
-		server = "tcp://127.0.0.1:1883"
-	}
+	server := config.GetOrDefault("mqtt.url", "tcp://127.0.0.1:1883")
 
-	qos := config.GetOption("mqtt", "qos")
-	if qos != "" {
-		qosValue, err := strconv.Atoi(qos)
-		if err != nil || qosValue < 0 || qosValue > 2 {
-			logrus.Warnf("mqtt: Invalid Quality of Service level: %s", qos)
-		} else {
-			broker.qos = byte(qosValue)
-		}
+	qosStr := config.GetOrDefault("mqtt.qos", "1")
+	qos, err := strconv.Atoi(qosStr)
+	if err != nil || qos < 0 || qos > 2 {
+		logrus.Warnf("mqtt: Invalid Quality of Service level: %s", qosStr)
+		qos = 1
 	}
+	broker.qos = byte(qos)
 
-	clientid := config.GetOption("mqtt", "clientid")
+	clean, _ := strconv.ParseBool(config.GetOrDefault("mqtt.clean", "false"))
+
+	clientid := config.GetOrDefault("mqtt.clientid", "")
 	if clientid == "" {
 		buf := make([]byte, 16)
 		rand.Read(buf)
 		clientid = hex.EncodeToString(buf)
+		config.AddOption("mqtt", "clientid", clientid)
+		config.Save()
 	}
 
 	opts := mqtt.NewClientOptions()
@@ -64,8 +74,11 @@ func (broker *Broker) configure(username, password string) *mqtt.ClientOptions {
 	opts.SetClientID(clientid)
 	opts.SetUsername(username)
 	opts.SetPassword(password)
-	opts.SetOnConnectHandler(broker.onConnect)
-	opts.SetCleanSession(false)
+	opts.SetCleanSession(clean)
+
+	opts.SetDefaultPublishHandler(func(_ mqtt.Client, msg mqtt.Message) {
+		go broker.serveMQTT(msg)
+	})
 
 	return opts
 }
@@ -114,7 +127,7 @@ func (broker *Broker) Close() {
 	broker.client.Disconnect(250)
 }
 
-const apiTopic = "api/+/+/#"
+const apiTopic = "api/#"
 
 // Subscribe mqtt topic and forward to API server. The topic has the
 // following pattern:
@@ -142,19 +155,23 @@ func (broker *Broker) Forward(mux http.Handler) error {
 		panic("MQTT broker already forwarded")
 	}
 	broker.mux = mux
-	if t := broker.client.Subscribe(apiTopic, broker.qos, broker.serveMQTT); t.Wait() && t.Error() != nil {
-		broker.mux = nil
-		return t.Error()
-	} else {
-		return nil
-	}
-}
 
-func (broker *Broker) onConnect(client mqtt.Client) {
-	logrus.Info("Connected to MQTT broker")
-	if broker.mux != nil {
-		broker.tokenQ <- client.Subscribe(apiTopic, broker.qos, broker.serveMQTT)
+	// Connect to MQTT broker
+	t := broker.client.Connect().(*mqtt.ConnectToken)
+	if t.Wait() && t.Error() != nil {
+		return t.Error()
 	}
+
+	// Subscribe on api topic if no session present
+	if !t.SessionPresent() {
+		logrus.Debugf("Subscribe to %s", apiTopic)
+		t := broker.client.Subscribe(apiTopic, broker.qos, nil)
+		if t.Wait() && t.Error() != nil {
+			return t.Error()
+		}
+	}
+
+	return nil
 }
 
 type fakeWriter struct {
@@ -178,7 +195,11 @@ func (w *fakeWriter) WriteHeader(statusCode int) {
 	w.statusCode = statusCode
 }
 
-func (broker *Broker) serveMQTT(client mqtt.Client, msg mqtt.Message) {
+func (broker *Broker) serveMQTT(msg mqtt.Message) {
+	logrus.Debugf("received message: %s, %s\n", msg.Topic(), string(msg.Payload()))
+	if !strings.HasPrefix(msg.Topic(), "api/") {
+		return // not our message
+	}
 	sp := strings.Split(msg.Topic(), "/")
 	if len(sp) < 4 {
 		logrus.Errorf("Invalid topic: %s", msg.Topic())

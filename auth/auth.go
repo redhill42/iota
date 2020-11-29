@@ -19,7 +19,7 @@ type Authenticator struct {
 }
 
 func NewAuthenticator(db *userdb.UserDatabase) (*Authenticator, error) {
-	secret, err := db.GetSecret()
+	secret, err := db.GetSecret("jwt")
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +71,4 @@ func (auth *Authenticator) VerifyToken(token string) (string, error) {
 		return auth.secret, nil
 	})
 	return claims.Subject, err
-}
-
-func (auth *Authenticator) GetSecret() []byte {
-	return auth.secret
 }
