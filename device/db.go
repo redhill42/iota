@@ -2,6 +2,7 @@ package device
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -58,6 +59,14 @@ func (r Record) afterLoad(sel selector) {
 	}
 }
 
+func (r Record) GetID() string {
+	return r["id"].(string)
+}
+
+func (r Record) Marshal() ([]byte, error) {
+	return json.Marshal(r)
+}
+
 func openDatabase() (*deviceDB, error) {
 	dburl := config.Get("devicedb.url")
 	if dburl == "" {
@@ -107,6 +116,9 @@ func (db *deviceDB) Find(id string, keys []string) (result Record, err error) {
 		} else {
 			sel = newSelector(keys)
 			err = c.FindId(id).Select(sel).One(&result)
+		}
+		if err == mgo.ErrNotFound {
+			err = DeviceNotFoundError(id)
 		}
 		result.afterLoad(sel)
 		return err

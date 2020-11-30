@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/redhill42/iota/alarm"
 	"github.com/redhill42/iota/auth"
 	"github.com/redhill42/iota/auth/userdb"
 	"github.com/redhill42/iota/config"
@@ -17,9 +18,10 @@ import (
 type Agent struct {
 	Users         *userdb.UserDatabase
 	Authz         *auth.Authenticator
-	DeviceManager *device.Manager
 	MQTTBroker    *mqtt.Broker
 	TSDB          tsdb.TSDB
+	DeviceManager *device.Manager
+	AlarmManager  *alarm.Manager
 }
 
 func New() (agent *Agent, err error) {
@@ -60,6 +62,11 @@ func New() (agent *Agent, err error) {
 		return nil, err
 	}
 
+	agent.AlarmManager, err = alarm.NewManager()
+	if err != nil {
+		return nil, err
+	}
+
 	return agent, nil
 }
 
@@ -67,6 +74,7 @@ func New() (agent *Agent, err error) {
 func (agent *Agent) Close() {
 	agent.Users.Close()
 	agent.DeviceManager.Close()
+	agent.AlarmManager.Close()
 	agent.MQTTBroker.Close()
 	agent.TSDB.Close()
 }

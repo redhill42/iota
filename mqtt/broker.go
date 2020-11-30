@@ -218,6 +218,9 @@ func (broker *Broker) serveMQTT(msg mqtt.Message) {
 			method = "GET"
 			requestId = sp[len(sp)-1]
 			path = strings.Join(sp[3:len(sp)-2], "/")
+		} else if len(sp) >= 5 && sp[len(sp)-1] == "delete" {
+			method = "DELETE"
+			path = strings.Join(sp[3:len(sp)-1], "/")
 		} else {
 			method = "POST"
 			path = strings.Join(sp[3:], "/")

@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/redhill42/iota/agent"
 	"github.com/redhill42/iota/api/server/middleware"
+	"github.com/redhill42/iota/api/server/router/alarms"
 	"github.com/redhill42/iota/api/server/router/devices"
 	"github.com/redhill42/iota/api/server/router/jsonrpc"
 	"github.com/redhill42/iota/api/server/router/system"
@@ -22,6 +23,7 @@ func NewAPIServer(agent *agent.Agent) (api *Server, err error) {
 		system.NewRouter(agent),
 		jsonrpc.NewRouter(agent),
 		devices.NewRouter(agent),
+		alarms.NewRouter(agent),
 	)
 
 	// Forward MQTT request to API server.

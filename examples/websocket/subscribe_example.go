@@ -15,12 +15,13 @@ import (
 func main() {
 	var addr = flag.String("addr", "localhost:8080", "http service address")
 	var token = flag.String("token", "", "api access token")
+	var path = flag.String("path", "/api/v1/devices/+/subscribe", "api path")
 	flag.Parse()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	u := url.URL{Scheme: "ws", Host: *addr, Path: "/api/v1/devices/+/subscribe"}
+	u := url.URL{Scheme: "ws", Host: *addr, Path: *path}
 	h := http.Header{"Authorization": {"bearer " + *token}}
 
 	log.Printf("connecting to %s", u.String())

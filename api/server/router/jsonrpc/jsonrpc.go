@@ -15,8 +15,10 @@ type rpcRouter struct {
 
 func NewRouter(ag *agent.Agent) router.Router {
 	s := rpc.NewServer()
-	err := s.RegisterName("device", newDeviceService(ag))
-	if err != nil {
+	if err := s.RegisterName("device", newDeviceService(ag)); err != nil {
+		panic(err)
+	}
+	if err := s.RegisterName("alarm", newAlarmService(ag)); err != nil {
 		panic(err)
 	}
 

@@ -8,6 +8,7 @@ import (
 	"github.com/redhill42/iota/agent"
 	"github.com/redhill42/iota/api/server/httputils"
 	"github.com/redhill42/iota/api/server/router"
+	"github.com/redhill42/iota/api/server/websocket"
 	"github.com/redhill42/iota/api/types"
 	"github.com/redhill42/iota/device"
 )
@@ -18,14 +19,14 @@ const claimPath = "/claims/{id:[^/]+}"
 type devicesRouter struct {
 	*agent.Agent
 	routes []router.Route
-	hub    *Hub
+	hub    *websocket.Hub
 }
 
 func NewRouter(agent *agent.Agent) router.Router {
-	h := newHub()
-	go h.run()
+	h := websocket.NewHub()
+	go h.Run()
 	agent.DeviceManager.OnUpdate(func(rec device.Record) {
-		h.updates <- rec
+		h.Updates() <- rec
 	})
 
 	r := &devicesRouter{Agent: agent, hub: h}
@@ -148,7 +149,7 @@ func (dr *devicesRouter) rpc(w http.ResponseWriter, r *http.Request, vars map[st
 }
 
 func (dr *devicesRouter) subscribe(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	return dr.hub.serveWs(w, r, vars["id"])
+	return dr.hub.ServeWS(w, r, vars["id"])
 }
 
 func (dr *devicesRouter) measurement(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
